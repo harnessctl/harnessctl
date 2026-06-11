@@ -34,11 +34,11 @@ the pull (no silent multi-GB downloads).
 
 **Format → engine compatibility matrix** (the crux of "available to all engines"):
 
-| Format            | llama.cpp | LM Studio | Ollama         | MLX        |
-| ----------------- | --------- | --------- | -------------- | ---------- |
-| GGUF              | ✅        | ✅        | ✅ (Modelfile import) | ❌  |
-| MLX (safetensors) | ❌        | ❌        | ❌             | ✅ (macOS) |
-| HF safetensors    | (convert) | (convert) | (convert)     | (convert)  |
+| Format            | llama.cpp | LM Studio | Ollama                | MLX        |
+| ----------------- | --------- | --------- | --------------------- | ---------- |
+| GGUF              | ✅        | ✅        | ✅ (Modelfile import) | ❌         |
+| MLX (safetensors) | ❌        | ❌        | ❌                    | ✅ (macOS) |
+| HF safetensors    | (convert) | (convert) | (convert)             | (convert)  |
 
 **Strategy:** prefer pulling a **GGUF** repo/quant → instantly usable by
 llama.cpp + LM Studio; for Ollama, generate a `Modelfile` (`FROM ./model.gguf`)
@@ -61,16 +61,16 @@ harnesses see it.
 
 ## File Changes
 
-| File                                   | Change                                                       |
-| -------------------------------------- | ------------------------------------------------------------ |
-| `src/harnessctl/sysprobe/profile.py`   | RAM/CPU/GPU/VRAM detection → `SystemProfile` (OS-gated).     |
-| `src/harnessctl/recommend/estimate.py` | Footprint estimate per quant; fit check.                     |
-| `src/harnessctl/recommend/ranker.py`   | HF candidate search + fit/capability ranking.                |
-| `src/harnessctl/pull/huggingface.py`   | HF download into shared store; quant/file selection.         |
-| `src/harnessctl/pull/sources.py`       | Source prefix parsing (`hf:`/`ollama:`/url); ollama wrap.    |
-| `src/harnessctl/expose/matrix.py`      | Format→engine matrix; capability resolution.                 |
-| `src/harnessctl/expose/ollama_import.py`| Generate Modelfile + `ollama create` from a GGUF.           |
-| `src/harnessctl/expose/register.py`    | Write pulled model into `models.yaml` fragment.              |
+| File                                     | Change                                                    |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `src/harnessctl/sysprobe/profile.py`     | RAM/CPU/GPU/VRAM detection → `SystemProfile` (OS-gated).  |
+| `src/harnessctl/recommend/estimate.py`   | Footprint estimate per quant; fit check.                  |
+| `src/harnessctl/recommend/ranker.py`     | HF candidate search + fit/capability ranking.             |
+| `src/harnessctl/pull/huggingface.py`     | HF download into shared store; quant/file selection.      |
+| `src/harnessctl/pull/sources.py`         | Source prefix parsing (`hf:`/`ollama:`/url); ollama wrap. |
+| `src/harnessctl/expose/matrix.py`        | Format→engine matrix; capability resolution.              |
+| `src/harnessctl/expose/ollama_import.py` | Generate Modelfile + `ollama create` from a GGUF.         |
+| `src/harnessctl/expose/register.py`      | Write pulled model into `models.yaml` fragment.           |
 
 ## Tasks
 

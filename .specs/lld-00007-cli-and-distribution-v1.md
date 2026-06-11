@@ -51,12 +51,12 @@ zero-clone `uvx` run has everything.
 
 Three run paths, all via uv:
 
-| Path                     | Command                                                       |
-| ------------------------ | ------------------------------------------------------------- |
-| From repo (HEAD)         | `uvx --from git+https://github.com/<u>/harnessctl harnessctl …` |
-| From a release tag       | `uvx --from git+https://github.com/<u>/harnessctl@<tag> harnessctl …` |
-| From PyPI/release wheel  | `uvx harnessctl …`                                            |
-| Cloned dev               | `uv run harnessctl …` / `uv sync`                             |
+| Path                    | Command                                                               |
+| ----------------------- | --------------------------------------------------------------------- |
+| From repo (HEAD)        | `uvx --from git+https://github.com/<u>/harnessctl harnessctl …`       |
+| From a release tag      | `uvx --from git+https://github.com/<u>/harnessctl@<tag> harnessctl …` |
+| From PyPI/release wheel | `uvx harnessctl …`                                                    |
+| Cloned dev              | `uv run harnessctl …` / `uv sync`                                     |
 
 **Release automation:** a GitHub Actions workflow on tag `v*` builds sdist+wheel
 (`uv build`), attaches the zip/wheel to a GitHub Release, and (optionally)
@@ -65,14 +65,14 @@ repository itself."
 
 ## File Changes
 
-| File                              | Change                                                          |
-| --------------------------------- | --------------------------------------------------------------- |
-| `pyproject.toml`                  | `[project.scripts]` entrypoint, package-data include for `templates/` + `spec/defaults/`, uv/hatchling build config. |
-| `src/harnessctl/cli.py`           | Typer `app`, global options, `AppContext`, warning-flush, exit codes. |
-| `src/harnessctl/commands/*.py`    | One module per command group (init, validate, compile, discover, models, agents). |
-| `src/harnessctl/output.py`        | Rich renderers (tables, diffs, status) + `--json` serializers.  |
-| `.github/workflows/release.yml`   | Tag-triggered `uv build` + GitHub Release asset upload + optional PyPI publish. |
-| `README.md`                       | Quickstart with the `uvx` invocations.                          |
+| File                            | Change                                                                                                               |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `pyproject.toml`                | `[project.scripts]` entrypoint, package-data include for `templates/` + `spec/defaults/`, uv/hatchling build config. |
+| `src/harnessctl/cli.py`         | Typer `app`, global options, `AppContext`, warning-flush, exit codes.                                                |
+| `src/harnessctl/commands/*.py`  | One module per command group (init, validate, compile, discover, models, agents).                                    |
+| `src/harnessctl/output.py`      | Rich renderers (tables, diffs, status) + `--json` serializers.                                                       |
+| `.github/workflows/release.yml` | Tag-triggered `uv build` + GitHub Release asset upload + optional PyPI publish.                                      |
+| `README.md`                     | Quickstart with the `uvx` invocations.                                                                               |
 
 ## Tasks
 

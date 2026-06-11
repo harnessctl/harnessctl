@@ -21,8 +21,8 @@ source-of-truth schema every other subsystem reads from. All sibling LLDs
 (00002–00007) depend on the types defined here. No harness config is ever the
 source of truth — this IR is.
 
-Cross-LLM consensus driving this design: *own registry = source of truth*,
-*capabilities not fields*, *warnings not silent drops*.
+Cross-LLM consensus driving this design: _own registry = source of truth_,
+_capabilities not fields_, _warnings not silent drops_.
 
 ## Approach
 
@@ -64,23 +64,22 @@ whether a canonical field becomes native config, prompt text, or a `WARN`.
 
 **Scopes model (multi-destination per harness):** a single harness can be
 configured at several **destination scopes**, and the compiler must be able to
-emit to *all* supported scopes (or a selected subset). Each `HarnessTarget`
+emit to _all_ supported scopes (or a selected subset). Each `HarnessTarget`
 therefore owns an ordered list of `HarnessScope` records:
 
 ```yaml
 harness:
   opencode:
-    capabilities: {...}
+    capabilities: { ... }
     scopes:
-      - { name: global,  kind: global,  path: "~/.config/opencode" }
+      - { name: global, kind: global, path: "~/.config/opencode" }
       - { name: project, kind: project, path: "{project}/.opencode" }
   pi:
-    capabilities: {...}
+    capabilities: { ... }
     scopes:
-      - { name: global,  kind: global,  path: "~/.pi" }
+      - { name: global, kind: global, path: "~/.pi" }
       - { name: project, kind: project, path: "{project}" }
-      - { name: custom,  kind: custom,  path: "{project}/.custom-pi",
-          launch_env: { PI_CODING_AGENT_DIR: "{path}" } }
+      - { name: custom, kind: custom, path: "{project}/.custom-pi", launch_env: { PI_CODING_AGENT_DIR: "{path}" } }
 ```
 
 `HarnessScope` fields: `name` (unique within a harness), `kind`
@@ -98,15 +97,15 @@ warnings (`harness`, `field`, `reason`, `fallback`) surfaced by the CLI.
 
 ## File Changes
 
-| File                              | Change                                                              |
-| --------------------------------- | ------------------------------------------------------------------- |
-| `pyproject.toml`                  | Project metadata, deps (pydantic, pyyaml, jinja2, typer, rich, httpx, huggingface_hub), uv build backend, `harnessctl` entrypoint. |
-| `src/harnessctl/__init__.py`      | Package init, version.                                              |
+| File                              | Change                                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pyproject.toml`                  | Project metadata, deps (pydantic, pyyaml, jinja2, typer, rich, httpx, huggingface_hub), uv build backend, `harnessctl` entrypoint.                |
+| `src/harnessctl/__init__.py`      | Package init, version.                                                                                                                            |
 | `src/harnessctl/spec/models.py`   | Pydantic models: `Spec`, `Tier`, `Model`, `ModelSource`, `MCPServer`, `Agent`, `Profile`, `HarnessTarget`, `HarnessScope`, `HarnessCapabilities`. |
-| `src/harnessctl/spec/loader.py`   | File discovery, deterministic deep-merge, YAML parse into `Spec`.   |
-| `src/harnessctl/spec/validate.py` | `validate_references` semantic pass; `SpecError`.                   |
-| `src/harnessctl/spec/warnings.py` | `WarningCollector`, `Warning` dataclass.                            |
-| `src/harnessctl/spec/defaults/*`  | Packaged default YAML shipped with the wheel.                       |
+| `src/harnessctl/spec/loader.py`   | File discovery, deterministic deep-merge, YAML parse into `Spec`.                                                                                 |
+| `src/harnessctl/spec/validate.py` | `validate_references` semantic pass; `SpecError`.                                                                                                 |
+| `src/harnessctl/spec/warnings.py` | `WarningCollector`, `Warning` dataclass.                                                                                                          |
+| `src/harnessctl/spec/defaults/*`  | Packaged default YAML shipped with the wheel.                                                                                                     |
 
 ## Tasks
 

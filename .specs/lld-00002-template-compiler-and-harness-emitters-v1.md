@@ -15,8 +15,8 @@ opencode-agent: lead-engineer
 Implements **Req 1**: author prompts/skills/tools/scripts once as templates and
 "compile" them to multiple harnesses (OpenCode + Pi.dev first). Consumes the IR
 from LLD-00001. Sibling of LLD-00003 (which propagates MCP/model config); this
-LLD owns the *content* artifacts (prompts/skills/agents/commands), 00003 owns the
-*settings* artifacts.
+LLD owns the _content_ artifacts (prompts/skills/agents/commands), 00003 owns the
+_settings_ artifacts.
 
 ## Approach
 
@@ -43,16 +43,16 @@ render time.
 **Emit layer (per-harness emitter):** An abstract `Emitter` base with one
 concrete subclass per harness. Each emitter knows the target's **path map** and
 **format**. Crucially, the path map is **resolved against a `HarnessScope`**
-(LLD-00001), so the *same* emitter writes to global, project, or custom
+(LLD-00001), so the _same_ emitter writes to global, project, or custom
 destinations by swapping the scope's resolved base path:
 
-| Harness  | Scope     | Resolved base                | Agent / files                          |
-| -------- | --------- | ---------------------------- | -------------------------------------- |
-| OpenCode | global    | `~/.config/opencode`         | `agent/<name>.md`, `AGENTS.md`, skills |
-| OpenCode | project   | `{project}/.opencode`        | `agent/<name>.md`, `AGENTS.md`, skills |
-| Pi.dev   | global    | `~/.pi`                      | `agent/<name>.md`, `AGENTS.md`, skills |
-| Pi.dev   | project   | `{project}`                  | `agent/<name>.md`, `AGENTS.md`, skills |
-| Pi.dev   | custom    | `{project}/.custom-pi`       | same, + emit `PI_CODING_AGENT_DIR` launch hint |
+| Harness  | Scope   | Resolved base          | Agent / files                                  |
+| -------- | ------- | ---------------------- | ---------------------------------------------- |
+| OpenCode | global  | `~/.config/opencode`   | `agent/<name>.md`, `AGENTS.md`, skills         |
+| OpenCode | project | `{project}/.opencode`  | `agent/<name>.md`, `AGENTS.md`, skills         |
+| Pi.dev   | global  | `~/.pi`                | `agent/<name>.md`, `AGENTS.md`, skills         |
+| Pi.dev   | project | `{project}`            | `agent/<name>.md`, `AGENTS.md`, skills         |
+| Pi.dev   | custom  | `{project}/.custom-pi` | same, + emit `PI_CODING_AGENT_DIR` launch hint |
 
 **Scope resolution & fan-out:** the emitter takes a resolved scope (base path +
 `launch_env`) and computes absolute artifact paths via the harness path map
@@ -85,16 +85,16 @@ after rendering so unique harness features survive (DeepSeek pattern).
 
 ## File Changes
 
-| File                                   | Change                                                      |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `src/harnessctl/render/engine.py`      | Jinja2 environment, custom filters, partial resolution.     |
-| `src/harnessctl/render/context.py`     | Build render context (Spec + harness capabilities view).    |
-| `src/harnessctl/emit/base.py`          | `Emitter` ABC: scope-resolved path map, write/dry-run/diff/check, markers, backups. |
-| `src/harnessctl/emit/paths.py`         | `resolve_path` helper (`{project}`/`{home}`/`~`/`${env:}`), scope→base resolution. |
-| `src/harnessctl/emit/opencode.py`      | OpenCode emitter (agent dir, AGENTS.md, skills), per-scope.            |
-| `src/harnessctl/emit/pi.py`            | Pi.dev emitter (agent dir, skills, `launch_env` hint), per-scope.     |
-| `src/harnessctl/emit/registry.py`      | Map harness id → emitter; iterate `Spec.harness[*].scopes`; honor `--harness`/`--scope`. |
-| `templates/partials/escalation.md.j2`  | Shared escalation contract include (owned by LLD-00006).    |
+| File                                  | Change                                                                                   |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/harnessctl/render/engine.py`     | Jinja2 environment, custom filters, partial resolution.                                  |
+| `src/harnessctl/render/context.py`    | Build render context (Spec + harness capabilities view).                                 |
+| `src/harnessctl/emit/base.py`         | `Emitter` ABC: scope-resolved path map, write/dry-run/diff/check, markers, backups.      |
+| `src/harnessctl/emit/paths.py`        | `resolve_path` helper (`{project}`/`{home}`/`~`/`${env:}`), scope→base resolution.       |
+| `src/harnessctl/emit/opencode.py`     | OpenCode emitter (agent dir, AGENTS.md, skills), per-scope.                              |
+| `src/harnessctl/emit/pi.py`           | Pi.dev emitter (agent dir, skills, `launch_env` hint), per-scope.                        |
+| `src/harnessctl/emit/registry.py`     | Map harness id → emitter; iterate `Spec.harness[*].scopes`; honor `--harness`/`--scope`. |
+| `templates/partials/escalation.md.j2` | Shared escalation contract include (owned by LLD-00006).                                 |
 
 ## Tasks
 

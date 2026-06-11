@@ -12,7 +12,7 @@ description: Manage tasks, epics, and bugs based on ISSUE_TRACKING environment v
 ## Templates
 
 - **Issues:** Follow the instructions in `skills/issue-tracking/issue.md` to format your issue body.
-  - *Note:* The YAML frontmatter (id, type, parent, etc.) is automatically added by the `issue-create` tool (when using `fs`). Do NOT add it yourself when creating an issue. You may update it later if necessary.
+  - _Note:_ The YAML frontmatter (id, type, parent, etc.) is automatically added by the `issue-create` tool (when using `fs`). Do NOT add it yourself when creating an issue. You may update it later if necessary.
 - **Comments:** Format your updates and comments using `skills/issue-tracking/comment.md`.
 
 ## Content & Format

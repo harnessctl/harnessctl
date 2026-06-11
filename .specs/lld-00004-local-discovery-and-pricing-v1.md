@@ -23,12 +23,12 @@ no daemon (deferred to Phase 2).
 **Discovery engine:** probe each known local runtime over its OpenAI-compatible
 (or native) listing endpoint, with short timeouts and graceful skip-if-down:
 
-| Runtime   | Probe                                  | Parse            |
-| --------- | -------------------------------------- | ---------------- |
-| Ollama    | `GET :11434/api/tags`                  | `.models[].name` |
-| LM Studio | `GET :1234/v1/models`                  | `.data[].id`     |
-| llama.cpp | `GET :8080/v1/models`                  | `.data[].id` (usually loaded model only) |
-| MLX       | `GET :8080/v1/models` (mlx_lm.server) + HF cache scan | `.data[].id` / dirs |
+| Runtime   | Probe                                                 | Parse                                    |
+| --------- | ----------------------------------------------------- | ---------------------------------------- |
+| Ollama    | `GET :11434/api/tags`                                 | `.models[].name`                         |
+| LM Studio | `GET :1234/v1/models`                                 | `.data[].id`                             |
+| llama.cpp | `GET :8080/v1/models`                                 | `.data[].id` (usually loaded model only) |
+| MLX       | `GET :8080/v1/models` (mlx_lm.server) + HF cache scan | `.data[].id` / dirs                      |
 
 Endpoints come from the spec (overridable). Results normalize into
 `DiscoveredModel{runtime, id, endpoint, local=True}`. Discovery is concurrent
@@ -55,16 +55,16 @@ record `source` + `fetched_at` per row so staleness is visible.
 
 ## File Changes
 
-| File                                   | Change                                                     |
-| -------------------------------------- | ---------------------------------------------------------- |
-| `src/harnessctl/discovery/base.py`     | `RuntimeProbe` ABC, `DiscoveredModel`, concurrent runner.  |
-| `src/harnessctl/discovery/ollama.py`   | Ollama `/api/tags` probe.                                  |
-| `src/harnessctl/discovery/openai_compat.py` | Shared `/v1/models` probe for LM Studio/llama.cpp/MLX. |
-| `src/harnessctl/discovery/mlx.py`      | MLX server probe + HF cache scan (macOS-gated).            |
-| `src/harnessctl/pricing/litellm.py`    | Fetch + cache litellm price JSON.                          |
-| `src/harnessctl/pricing/openrouter.py` | Fetch + cache OpenRouter live pricing.                     |
-| `src/harnessctl/pricing/catalog.py`    | Merge pricing + discovery → `PricedModel` list; sorting.   |
-| `src/harnessctl/pricing/cache.py`      | TTL cache read/write + stale fallback.                     |
+| File                                        | Change                                                    |
+| ------------------------------------------- | --------------------------------------------------------- |
+| `src/harnessctl/discovery/base.py`          | `RuntimeProbe` ABC, `DiscoveredModel`, concurrent runner. |
+| `src/harnessctl/discovery/ollama.py`        | Ollama `/api/tags` probe.                                 |
+| `src/harnessctl/discovery/openai_compat.py` | Shared `/v1/models` probe for LM Studio/llama.cpp/MLX.    |
+| `src/harnessctl/discovery/mlx.py`           | MLX server probe + HF cache scan (macOS-gated).           |
+| `src/harnessctl/pricing/litellm.py`         | Fetch + cache litellm price JSON.                         |
+| `src/harnessctl/pricing/openrouter.py`      | Fetch + cache OpenRouter live pricing.                    |
+| `src/harnessctl/pricing/catalog.py`         | Merge pricing + discovery → `PricedModel` list; sorting.  |
+| `src/harnessctl/pricing/cache.py`           | TTL cache read/write + stale fallback.                    |
 
 ## Tasks
 

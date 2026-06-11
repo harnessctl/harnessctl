@@ -14,7 +14,7 @@ opencode-agent: lead-engineer
 
 Implements the **3-tier agent design** layered on top of Req 1/2. Both target
 harnesses cap agent nesting at 2 levels (orchestrator + leaf subagent — a
-subagent cannot spawn another). This LLD models 3 *logical* tiers as
+subagent cannot spawn another). This LLD models 3 _logical_ tiers as
 **model-bound roles mediated by one hub orchestrator** (Solution A,
 hub-and-spoke), with an opt-in out-of-process escape hatch (Solution B) for true
 depth. Authored as templates per LLD-00002; tiers resolve to models per
@@ -38,7 +38,7 @@ agents:
 ## Approach
 
 **Hub-and-spoke (Solution A — default).** The orchestrator is the only
-delegator. It is deliberately a *balanced* (non-reasoning) model whose job is
+delegator. It is deliberately a _balanced_ (non-reasoning) model whose job is
 **routing, sequencing, and verdict aggregation only** — it must never judge
 content quality itself. Quality judgment is delegated (e.g. thinker-B validates
 thinker-A's output); the orchestrator records the verdict.
@@ -47,13 +47,13 @@ thinker-A's output); the orchestrator records the verdict.
 (impossible within the 2-level cap and unnecessary in hub topology). A worker
 returns a **structured verdict**; the orchestrator reroutes:
 
-| Verdict        | Emitted by      | Orchestrator action            |
-| -------------- | --------------- | ------------------------------ |
-| `DONE`         | any worker      | proceed / next step            |
-| `APPROVED`     | thinker/mid (validation) | accept artifact       |
-| `CHANGES{...}` | thinker/mid     | send back to producer with notes |
-| `ESCALATE{reason,context}` | mid   | dispatch to `thinker`          |
-| `NEEDS_SPEC{gap}` | coder        | dispatch to `mid` to refine spec |
+| Verdict                    | Emitted by               | Orchestrator action              |
+| -------------------------- | ------------------------ | -------------------------------- |
+| `DONE`                     | any worker               | proceed / next step              |
+| `APPROVED`                 | thinker/mid (validation) | accept artifact                  |
+| `CHANGES{...}`             | thinker/mid              | send back to producer with notes |
+| `ESCALATE{reason,context}` | mid                      | dispatch to `thinker`            |
+| `NEEDS_SPEC{gap}`          | coder                    | dispatch to `mid` to refine spec |
 
 `escalates_to` in the spec is a **routing hint** the orchestrator consults; the
 orchestrator owns the actual re-dispatch. The contract is encoded once in a
@@ -77,15 +77,15 @@ the prompt body + `WARN` (reuses LLD-00002 degradation).
 
 ## File Changes
 
-| File                                      | Change                                                       |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| `templates/partials/escalation.md.j2`     | Shared verdict/escalation contract include.                  |
-| `templates/agents/orchestrator.md.j2`     | Hub prompt: route-only, no content judgment, aggregation rules. |
-| `templates/agents/thinker.md.j2`          | Reasoning worker prompt.                                     |
-| `templates/agents/mid.md.j2`              | Balanced worker prompt; escalation to thinker.               |
-| `templates/agents/coder.md.j2`            | Local coder prompt; `NEEDS_SPEC` behavior.                   |
-| `src/harnessctl/spec/models.py`           | Extend `Agent` with `role`, `tier`, `can_delegate`, `escalates_to`, `delegate_via`. |
-| `src/harnessctl/agents/topology.py`       | Validate topology (hub exists, tiers resolve, no illegal in-process depth). |
+| File                                  | Change                                                                              |
+| ------------------------------------- | ----------------------------------------------------------------------------------- |
+| `templates/partials/escalation.md.j2` | Shared verdict/escalation contract include.                                         |
+| `templates/agents/orchestrator.md.j2` | Hub prompt: route-only, no content judgment, aggregation rules.                     |
+| `templates/agents/thinker.md.j2`      | Reasoning worker prompt.                                                            |
+| `templates/agents/mid.md.j2`          | Balanced worker prompt; escalation to thinker.                                      |
+| `templates/agents/coder.md.j2`        | Local coder prompt; `NEEDS_SPEC` behavior.                                          |
+| `src/harnessctl/spec/models.py`       | Extend `Agent` with `role`, `tier`, `can_delegate`, `escalates_to`, `delegate_via`. |
+| `src/harnessctl/agents/topology.py`   | Validate topology (hub exists, tiers resolve, no illegal in-process depth).         |
 
 ## Tasks
 

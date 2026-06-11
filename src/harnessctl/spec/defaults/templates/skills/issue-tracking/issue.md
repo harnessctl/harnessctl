@@ -4,7 +4,7 @@ When creating or updating an issue, structure the body of the issue as follows:
 
 ## YAML Frontmatter Reference (For Local `fs` tracking)
 
-*Note: The YAML frontmatter is automatically injected by the `issue-create` tool at the top of the file when creating a new issue. You do not need to generate it initially, but you MUST use this reference to update the fields (like `status`, `depends`, or `parent`) using the `edit` tool as the issue progresses.*
+_Note: The YAML frontmatter is automatically injected by the `issue-create` tool at the top of the file when creating a new issue. You do not need to generate it initially, but you MUST use this reference to update the fields (like `status`, `depends`, or `parent`) using the `edit` tool as the issue progresses._
 
 ```yaml
 id: "00001" # 5-digit zero-padded / only if ISSUE_TRACKING contains 'fs'
@@ -23,13 +23,14 @@ author: name # Optional: Author name
 1. **Title**: A clear and concise title. (If not using local `fs`, include the hierarchy emoticon in the title).
 
 2. **Description**: Use the Gherkin format to clearly state the user story or scenario:
+
    ```gherkin
    As a [persona]
    I want to [action]
    So that [benefit/value]
-   
+
    # OR
-   
+
    Given [initial context/state]
    When [action occurs]
    Then [expected outcome]

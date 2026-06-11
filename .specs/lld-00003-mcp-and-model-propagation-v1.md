@@ -16,7 +16,7 @@ Implements **Req 2**: propagate identical MCP server definitions and LLM model
 settings across all harnesses — especially proxied providers (OpenRouter,
 Abacus) and local runtimes (Ollama, MLX, llama.cpp, LM Studio). Consumes the IR
 (LLD-00001) and shares the emit infrastructure (LLD-00002). This LLD owns the
-*settings* artifacts (JSON/JSONC config), 00002 owns *content* artifacts.
+_settings_ artifacts (JSON/JSONC config), 00002 owns _content_ artifacts.
 
 ## Approach
 
@@ -26,16 +26,16 @@ Abacus) and local runtimes (Ollama, MLX, llama.cpp, LM Studio). Consumes the IR
 mcp:
   servers:
     - id: github
-      transport: stdio        # stdio | http | sse
-      command: ["gh-mcp"]     # for stdio
-      url: null               # for http/sse
+      transport: stdio # stdio | http | sse
+      command: ["gh-mcp"] # for stdio
+      url: null # for http/sse
       env: { GITHUB_TOKEN: "${env:GH_TOKEN}" }
 
 models:
-  gpt-x:    { via: openrouter, id: openai/gpt-4o, cost_ref: openai/gpt-4o }
-  claude-r: { via: anthropic,  id: claude-3-7-sonnet }
-  qwen:     { via: ollama,     id: qwen2.5-coder:7b, endpoint: http://localhost:11434 }
-  qwen-mlx: { via: mlx,        id: mlx-community/Qwen2.5-Coder-7B-4bit }
+  gpt-x: { via: openrouter, id: openai/gpt-4o, cost_ref: openai/gpt-4o }
+  claude-r: { via: anthropic, id: claude-3-7-sonnet }
+  qwen: { via: ollama, id: qwen2.5-coder:7b, endpoint: http://localhost:11434 }
+  qwen-mlx: { via: mlx, id: mlx-community/Qwen2.5-Coder-7B-4bit }
 ```
 
 **Provider normalization:** a `ProviderResolver` turns each `model.via` into the
@@ -46,14 +46,14 @@ OpenAI-compatible `/v1`**, so for most harnesses one logical model becomes one
 (anthropic) map to the harness's native provider block when supported, else fall
 back to their OpenAI-compatible endpoint.
 
-| `via`       | base_url                         | key source            |
-| ----------- | -------------------------------- | --------------------- |
-| openrouter  | `https://openrouter.ai/api/v1`   | `${env:OPENROUTER_KEY}` |
-| abacus      | configured proxy base_url        | `${env:ABACUS_KEY}`   |
-| ollama      | `http://localhost:11434/v1`      | none (`ollama`)       |
-| lmstudio    | `http://localhost:1234/v1`       | none                  |
-| llamacpp    | `http://localhost:8080/v1`       | none                  |
-| mlx         | `http://localhost:8080/v1` (mlx_lm.server) | none        |
+| `via`      | base_url                                   | key source              |
+| ---------- | ------------------------------------------ | ----------------------- |
+| openrouter | `https://openrouter.ai/api/v1`             | `${env:OPENROUTER_KEY}` |
+| abacus     | configured proxy base_url                  | `${env:ABACUS_KEY}`     |
+| ollama     | `http://localhost:11434/v1`                | none (`ollama`)         |
+| lmstudio   | `http://localhost:1234/v1`                 | none                    |
+| llamacpp   | `http://localhost:8080/v1`                 | none                    |
+| mlx        | `http://localhost:8080/v1` (mlx_lm.server) | none                    |
 
 **Secret handling:** never inline secrets. The spec uses `${env:VAR}`
 placeholders; emitters either pass the placeholder through (if the harness
@@ -63,10 +63,10 @@ the user to set the env var. Secrets never land in generated files.
 **Emitters (extend LLD-00002 `Emitter`):** add `emit_settings()` producing each
 harness's settings file:
 
-| Harness  | MCP target                              | Model/provider target                    |
-| -------- | --------------------------------------- | ---------------------------------------- |
+| Harness  | MCP target                                        | Model/provider target     |
+| -------- | ------------------------------------------------- | ------------------------- |
 | OpenCode | `opencode.json` `mcp` + `provider`/`model` blocks | same file, `provider` map |
-| Pi.dev   | `~/.pi/agent/settings.json` mcp + model | same file                                |
+| Pi.dev   | `~/.pi/agent/settings.json` mcp + model           | same file                 |
 
 Capability-gated: if a harness lacks MCP support (`supports_mcp=false`), skip +
 `WARN`. If a harness can't express a transport (e.g. only stdio, no http), `WARN`
@@ -74,13 +74,13 @@ with the unsupported server named.
 
 ## File Changes
 
-| File                                  | Change                                                        |
-| ------------------------------------- | ------------------------------------------------------------- |
-| `src/harnessctl/providers/resolver.py`| `ProviderResolver`: `via` → `{base_url, model_id, key_ref, kind}`. |
-| `src/harnessctl/providers/secrets.py` | `${env:VAR}` placeholder parsing + passthrough policy.        |
-| `src/harnessctl/emit/opencode.py`     | Add `emit_settings`: write `mcp` + `provider`/`model` into `opencode.json`. |
-| `src/harnessctl/emit/pi.py`           | Add `emit_settings`: write mcp + model into `~/.pi/agent/settings.json`. |
-| `src/harnessctl/emit/jsonmerge.py`    | JSON/JSONC structural merge preserving non-managed user keys. |
+| File                                   | Change                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| `src/harnessctl/providers/resolver.py` | `ProviderResolver`: `via` → `{base_url, model_id, key_ref, kind}`.          |
+| `src/harnessctl/providers/secrets.py`  | `${env:VAR}` placeholder parsing + passthrough policy.                      |
+| `src/harnessctl/emit/opencode.py`      | Add `emit_settings`: write `mcp` + `provider`/`model` into `opencode.json`. |
+| `src/harnessctl/emit/pi.py`            | Add `emit_settings`: write mcp + model into `~/.pi/agent/settings.json`.    |
+| `src/harnessctl/emit/jsonmerge.py`     | JSON/JSONC structural merge preserving non-managed user keys.               |
 
 ## Tasks
 

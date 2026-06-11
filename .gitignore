@@ -6,3 +6,6 @@ node_modules/
 .env.ai
 *.bak
 dist/
+.jscpd/
+.ruff_cache/
+.web_stash.db
