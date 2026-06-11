@@ -41,3 +41,14 @@ def get_registry() -> EmitterRegistry:
     if _REGISTRY is None:
         _REGISTRY = EmitterRegistry()
     return _REGISTRY
+
+
+# Auto-register concrete emitters when the registry module is imported.
+from harnessctl.emit.opencode import OpenCodeEmitter  # noqa: E402
+from harnessctl.emit.pi import PiEmitter  # noqa: E402
+
+get_registry().register(OpenCodeEmitter.HARNESS_ID, OpenCodeEmitter)
+get_registry().register(PiEmitter.HARNESS_ID, PiEmitter)
+
+# Module-level convenience alias for consumers.
+emitter_registry = get_registry()
