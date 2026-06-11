@@ -1,6 +1,6 @@
 """Rendering context builder for harnessctl templates."""
 
-from harnessctl.spec.models import HarnessTarget, Spec
+from harnessctl.spec.models import HarnessCapabilities, HarnessTarget, Spec
 
 
 class HarnessContext:
@@ -47,7 +47,10 @@ def build_context(spec: Spec, harness_id: str) -> dict:
     Raises:
         KeyError: If *harness_id* is not present in ``spec.harness``.
     """
-    target = spec.harness[harness_id]
+    target = spec.harness.get(harness_id)
+    if target is None:
+        # Gracefully degrade when the harness target is absent from the spec.
+        target = HarnessTarget(capabilities=HarnessCapabilities())
     return {
         "spec": spec,
         "harness": HarnessContext(target, harness_id),
