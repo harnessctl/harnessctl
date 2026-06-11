@@ -1,0 +1,21 @@
+models:
+  claude-3-opus:
+    sources:
+      - via: openrouter
+        id: anthropic/claude-3-opus
+  claude-3-sonnet:
+    sources:
+      - via: openrouter
+        id: anthropic/claude-3.5-sonnet
+  gpt-4o:
+    sources:
+      - via: openrouter
+        id: openai/gpt-4o
+  o3-mini:
+    sources:
+      - via: openrouter
+        id: openai/o3-mini
+  qwen-coder:
+    sources:
+      - via: ollama
+        id: qwen2.5-coder:14b

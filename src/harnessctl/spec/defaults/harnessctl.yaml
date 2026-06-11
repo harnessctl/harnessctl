@@ -1,0 +1,33 @@
+version: "1.0"
+
+harness:
+  opencode:
+    capabilities:
+      supports_subagent_model: false
+      supports_tool_permissions: "none"
+      supports_mcp: true
+    scopes:
+      - name: global
+        kind: global
+        path: "~/.config/opencode"
+      - name: project
+        kind: project
+        path: "{project}/.opencode"
+  
+  pi:
+    capabilities:
+      supports_subagent_model: true
+      supports_tool_permissions: "none"
+      supports_mcp: true
+    scopes:
+      - name: global
+        kind: global
+        path: "~/.pi"
+      - name: project
+        kind: project
+        path: "{project}"
+      - name: custom
+        kind: custom
+        path: "{project}/.custom-pi"
+        launch_env:
+          PI_CODING_AGENT_DIR: "{path}"

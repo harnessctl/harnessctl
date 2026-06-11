@@ -1,0 +1,36 @@
+{
+  "name": "noname",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dragoscirjan/noname.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/dragoscirjan/noname/issues"
+  },
+  "homepage": "https://github.com/dragoscirjan/noname#readme",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "jscpd": "^5.0.7",
+    "lint-staged": "^17.0.7"
+  },
+  "lint-staged": {
+    "*.py": [
+      "uv run ruff check --fix",
+      "uv run ruff format"
+    ],
+    "*": [
+      "jscpd"
+    ]
+  }
+}

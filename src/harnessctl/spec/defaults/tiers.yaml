@@ -1,0 +1,11 @@
+tiers:
+  reasoning:
+    primary: "claude-3-opus"
+    fallback: "o3-mini"
+  
+  balanced:
+    primary: "claude-3-sonnet"
+    fallback: "gpt-4o"
+  
+  cheap_local:
+    primary: "qwen-coder"
