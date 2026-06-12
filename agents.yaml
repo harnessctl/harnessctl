@@ -1,0 +1,22 @@
+version: '1.0'
+harness:
+  opencode:
+    capabilities:
+      supports_subagent_model: true
+      supports_mcp: true
+    scopes:
+      - name: default
+        kind: global
+        path: ~/.opencode
+tiers:
+  balanced:
+    primary: gpt-4
+models:
+  gpt-4:
+    sources:
+      - via: openai
+        id: gpt-4
+agents:
+  hub:
+    tier: balanced
+    role: hub
