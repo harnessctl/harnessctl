@@ -2,6 +2,24 @@
 
 `harnessctl` is a unified CLI utility designed to manage AI harness configurations, agent topologies, and MCP servers across different environments (like OpenCode and Pi.dev). It simplifies the orchestration of agent templates, model selection, and multi-tier delegation strategies.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [1. Initialization](#1-initialization)
+  - [2. Specification Management](#2-specification-management)
+  - [3. Agent Topology](#3-agent-topology)
+  - [4. Configuration Compilation](#4-configuration-compilation)
+  - [5. Model Discovery & Recommendation](#5-model-discovery--recommendation)
+- [Extending your configuration](#extending-your-configuration)
+  - [Defining New Agents](#defining-new-agents)
+  - [Adding New Skills](#adding-new-skills)
+  - [Customizing Templates](#customizing-templates)
+- [Command Reference](#command-reference)
+- [Configuration Example (agents.yaml)](#configuration-example-agentsyaml)
+- [License](#license)
+
 ## Key Features
 
 - **Agent Topology Management:** Define and validate Hub-and-Spoke hierarchies with multi-tier delegation.
