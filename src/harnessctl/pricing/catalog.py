@@ -34,31 +34,19 @@ def merge_catalog(
             status="running",
         )
 
-    # 2. Cloud models (OpenRouter)
-    for model_id, info in openrouter_prices.items():
-        if model_id not in catalog:
-            catalog[model_id] = PricedModel(
-                id=model_id,
-                provider=info["provider"],
-                input_per_mtok=info["input_per_mtok"],
-                output_per_mtok=info["output_per_mtok"],
-                context_window=info["context_window"],
-                local=False,
-                status="available",
-            )
-
-    # 3. Cloud models (LiteLLM)
-    for model_id, info in litellm_prices.items():
-        if model_id not in catalog:
-            catalog[model_id] = PricedModel(
-                id=model_id,
-                provider=info["provider"],
-                input_per_mtok=info["input_per_mtok"],
-                output_per_mtok=info["output_per_mtok"],
-                context_window=info["context_window"],
-                local=False,
-                status="available",
-            )
+    # 2. Cloud models
+    for prices in [openrouter_prices, litellm_prices]:
+        for model_id, info in prices.items():
+            if model_id not in catalog:
+                catalog[model_id] = PricedModel(
+                    id=model_id,
+                    provider=info["provider"],
+                    input_per_mtok=info["input_per_mtok"],
+                    output_per_mtok=info["output_per_mtok"],
+                    context_window=info["context_window"],
+                    local=False,
+                    status="available",
+                )
 
     # Sort cheapest first
     result = list(catalog.values())

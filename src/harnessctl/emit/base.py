@@ -100,7 +100,7 @@ class Emitter(ABC):
 
         template_dirs: list[Path] = []
         packaged = (
-            Path(__file__).resolve().parents[2] / "spec" / "defaults" / "templates"
+            Path(__file__).resolve().parents[1] / "spec" / "defaults" / "templates"
         )
         if packaged.exists():
             template_dirs.append(packaged)
@@ -108,13 +108,35 @@ class Emitter(ABC):
         engine = RenderEngine(template_dirs).bind_spec(spec)
 
         # --- agents ---
-        for name in spec.agents:
+        for name, agent in spec.agents.items():
             template_name = f"agents/{name}.md.j2"
+            agent_ctx = {**context, "agent_name": name}
             try:
-                rendered = engine.render(template_name, context)
+                rendered = engine.render(template_name, agent_ctx)
             except jinja2.exceptions.TemplateNotFound:
-                logger.warning("Template not found: %s", template_name)
-                continue
+                # Fallback order:
+                # 1. agents/{role}.md.j2 (role is more specific to the agent's nature)
+                # 2. agents/{tier}.md.j2 (tier is the capability level)
+                fallbacks = [
+                    f"agents/{agent.role.value}.md.j2",
+                    f"agents/{agent.tier}.md.j2",
+                ]
+                rendered = None
+                for fb in fallbacks:
+                    try:
+                        rendered = engine.render(fb, agent_ctx)
+                        break
+                    except jinja2.exceptions.TemplateNotFound:
+                        continue
+
+                if rendered is None:
+                    logger.warning(
+                        "Template not found for agent '%s' (tried %s, %s)",
+                        name,
+                        template_name,
+                        ", ".join(fallbacks),
+                    )
+                    continue
             target = Path(base_path) / agent_dir / f"{name}.md"
             self.emit_file(str(target), rendered, mode)
 

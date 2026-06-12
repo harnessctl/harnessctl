@@ -1,0 +1,14 @@
+### VERDICT PROTOCOL
+
+All communication between agents must conclude with one of the following verdicts to allow the Orchestrator to route the work correctly.
+
+- **DONE**: Use when a task is completed successfully and no further validation is required.
+- **APPROVED**: Use when you have reviewed an artifact (from another agent) and it meets all requirements.
+- **CHANGES{notes: "..."}**: Use when an artifact needs revisions. Provide clear, actionable notes.
+- **ESCALATE{reason: "...", context: "..."}**: Use when the current task exceeds your tier's capabilities (e.g., requires complex reasoning or architectural decisions).
+- **NEEDS_SPEC{gap: "..."}**: Use when the provided instructions or spec are ambiguous or incomplete. Specify exactly what is missing.
+
+**Rules:**
+1. Only the Orchestrator (Hub) can delegate to other workers.
+2. If you are a Worker, you must return your result to the Hub with a verdict.
+3. Do not attempt to call other agents directly unless using the CLI escape hatch.

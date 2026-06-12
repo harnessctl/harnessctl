@@ -20,7 +20,7 @@ def minimal_spec() -> Spec:
     return Spec(
         version="1.0",
         agents={
-            "backend": Agent(tier="balanced", role=AgentRole.WORKER),
+            "backend": Agent(tier="unknown_tier", role=AgentRole.WORKER),
         },
     )
 
@@ -80,13 +80,12 @@ class TestEmitAgents:
 
 
 class TestEmitSkills:
-    def test_skips_missing_skill_template(
+    def test_emits_skill_when_template_exists(
         self, tmp_path: Path, emitter: PiEmitter, minimal_spec: Spec
     ) -> None:
         scope = HarnessScope(name="project", kind=ScopeKind.PROJECT, path=str(tmp_path))
-        warnings = WarningCollector()
-        emitter.emit(minimal_spec, scope, None, "write", warnings)
-        assert not (tmp_path / "skills").exists()
+        emitter.emit(minimal_spec, scope, None, "write")
+        assert (tmp_path / "skills" / "clean-code" / "SKILL.md").exists()
 
 
 class TestModes:

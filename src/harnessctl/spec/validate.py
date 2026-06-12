@@ -2,6 +2,7 @@
 
 from harnessctl.spec.models import Spec
 from harnessctl.spec.warnings import WarningCollector
+from harnessctl.agents.topology import validate_topology, TopologyError
 
 
 class SpecError(Exception):
@@ -17,6 +18,11 @@ def validate_references(spec: Spec, warnings: WarningCollector) -> None:
         SpecError: When a required reference is missing or a duplicate scope name
             is detected within a harness target.
     """
+    try:
+        validate_topology(spec)
+    except TopologyError as e:
+        raise SpecError(str(e)) from e
+
     _validate_agents(spec)
     _validate_tiers(spec)
     _validate_profiles(spec)

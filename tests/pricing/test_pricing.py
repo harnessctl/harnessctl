@@ -35,7 +35,7 @@ def test_cache_logic(tmp_path):
 
 
 @pytest.mark.asyncio
-@patch("harnessctl.pricing.litellm.read_cache")
+@patch("harnessctl.pricing.common.read_cache")
 @patch("httpx.AsyncClient.get")
 async def test_litellm_fetch(mock_get, mock_read_cache):
     # simulate no cache
@@ -67,7 +67,7 @@ async def test_litellm_fetch(mock_get, mock_read_cache):
 
 
 @pytest.mark.asyncio
-@patch("harnessctl.pricing.openrouter.read_cache")
+@patch("harnessctl.pricing.common.read_cache")
 @patch("httpx.AsyncClient.get")
 async def test_openrouter_fetch(mock_get, mock_read_cache):
     mock_read_cache.return_value = None
