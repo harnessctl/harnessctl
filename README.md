@@ -80,6 +80,41 @@ harnessctl models discover
 harnessctl models recommend "coding task" --tier balanced
 ```
 
+## Extending your configuration
+
+### Defining New Agents
+
+Agents are defined in the `agents:` section of `agents.yaml`. Each agent requires a `role` and a `tier`.
+
+1.  **Add to `agents.yaml`**:
+    ```yaml
+    agents:
+      frontend-expert:
+        role: worker
+        tier: balanced
+        can_delegate: []
+        escalates_to: hub
+    ```
+2.  **Create a Template**: Create a template file in `agents/frontend-expert.md.j2`. If you don't create one, `harnessctl` will fall back to `agents/worker.md.j2`.
+3.  **Compile**: Run `harnessctl compile --mode write`.
+
+### Adding New Skills
+
+Skills are shared prompt components that can be used by agents.
+
+1.  **Create Template**: Add a new Jinja2 template in `skills/my-new-skill/SKILL.md.j2`.
+2.  **Use in Agents**: In your agent templates, you can include skills (logic depends on your harness implementation, but usually `harnessctl` ensures the skill files exist in the harness-specific skill directory).
+
+### Customizing Templates
+
+`harnessctl` uses a priority-based fallback system for templates:
+
+1.  **Named Template**: `agents/{name}.md.j2` (e.g., `agents/researcher.md.j2`)
+2.  **Role Template**: `agents/{role}.md.j2` (e.g., `agents/worker.md.j2`)
+3.  **Tier Template**: `agents/{tier}.md.j2` (e.g., `agents/reasoning.md.j2`)
+
+You can override any of these by creating the corresponding file in your project's local templates directory.
+
 ## Command Reference
 
 | Command            | Description                                           |
