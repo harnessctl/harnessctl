@@ -53,42 +53,74 @@ class PiEmitter(Emitter):
         self._emit_templates(
             spec, base_path, mode, agent_dir="agent", skills_dir="skills"
         )
+        self.emit_settings(spec, base_path, mode, warnings)
 
-    def emit_file(self, target_path: str, content: str, mode: str) -> None:
-        """Emit *content* to *target_path* using the given *mode*."""
-        from harnessctl.emit.base import FileChangedError
+    def emit_settings(
+        self,
+        spec: Spec,
+        base_path: str,
+        mode: str,
+        warnings: WarningCollector,
+    ) -> None:
+        """Emit mcp and model settings into settings.json."""
+        from harnessctl.providers.resolver import ProviderResolver
+        from harnessctl.emit.jsonmerge import merge_json_content
 
-        path = Path(target_path)
-        full_content = self._prepend_marker(content)
+        managed_data = {}
+        target = spec.harness.get(self.HARNESS_ID)
 
-        if mode == "dry-run":
+        # MCP
+        if target and target.capabilities.supports_mcp:
+            servers = {}
+            for name, mcp in spec.mcp.items():
+                if mcp.disabled:
+                    continue
+                if not mcp.command:
+                    warnings.add(
+                        field="mcp",
+                        reason=f"MCP server '{name}' has no command, pi only supports stdio.",
+                        harness=self.HARNESS_ID,
+                    )
+                    continue
+                servers[name] = {
+                    "command": mcp.command,
+                    "args": mcp.args,
+                    "env": mcp.env,
+                }
+            if servers:
+                managed_data["mcpServers"] = servers
+        elif spec.mcp:
+            warnings.add(
+                field="mcp",
+                reason=f"Harness '{self.HARNESS_ID}' does not support MCP.",
+                harness=self.HARNESS_ID,
+            )
+
+        # Models
+        models = {}
+        for name, model in spec.models.items():
+            if not model.sources:
+                continue
+            conn = ProviderResolver.resolve(model.sources[0])
+            m_dict = {"provider": conn.kind, "modelId": conn.model_id}
+            if conn.base_url:
+                m_dict["baseUrl"] = conn.base_url
+            if conn.key_ref:
+                m_dict["apiKey"] = conn.key_ref
+            models[name] = m_dict
+
+        if models:
+            managed_data["models"] = models
+
+        if not managed_data:
             return
 
-        if mode == "diff":
-            if path.exists():
-                existing = path.read_text(encoding="utf-8")
-                if existing == full_content:
-                    return
-                diff = self._unified_diff(existing, full_content, target_path)
-                raise FileChangedError(target_path, diff)
-            return
+        settings_path = Path(base_path) / "settings.json"
+        existing_content = ""
+        if settings_path.exists():
+            existing_content = settings_path.read_text(encoding="utf-8")
 
-        if mode == "check":
-            if path.exists():
-                existing = path.read_text(encoding="utf-8")
-                if existing != full_content:
-                    diff = self._unified_diff(existing, full_content, target_path)
-                    raise FileChangedError(target_path, diff)
-            else:
-                raise FileChangedError(
-                    target_path, f"File {target_path!r} does not exist."
-                )
-            return
-
-        if mode == "write":
-            self._backup_if_needed(path)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            self._atomic_write(path, full_content)
-            return
-
-        raise ValueError(f"Unknown mode: {mode!r}")
+        new_content = merge_json_content(existing_content, managed_data)
+        self._write_content_with_mode(
+            settings_path, new_content, existing_content, mode
+        )

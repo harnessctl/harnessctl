@@ -4,7 +4,10 @@ from pydantic import BaseModel, Field
 
 
 class ModelVia(str, Enum):
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
     OPENROUTER = "openrouter"
+    ABACUS = "abacus"
     OLLAMA = "ollama"
     MLX = "mlx"
     LLAMACPP = "llamacpp"

@@ -6,7 +6,7 @@ import difflib
 import logging
 import os
 import tempfile
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
 
 import jinja2
@@ -30,22 +30,6 @@ class Emitter(ABC):
     """
 
     HARNESS_ID: str = ""
-
-    @abstractmethod
-    def emit_file(self, target_path: str, content: str, mode: str) -> None:
-        """Emit *content* to *target_path* using the given *mode*.
-
-        Args:
-            target_path: Absolute path where the file should be written.
-            content: Rendered file content (without the generated marker;
-                the implementation should prepend it when writing).
-            mode: One of ``"dry-run"``, ``"diff"``, ``"check"``, ``"write"``.
-
-        Raises:
-            ValueError: If *mode* is not recognised.
-            FileChangedError: If *mode* is ``"check"`` and the on-disk content
-                differs from *content*.
-        """
 
     @staticmethod
     def _prepend_marker(content: str) -> str:
@@ -149,6 +133,48 @@ class Emitter(ABC):
                     continue
                 target = Path(base_path) / skills_dir / skill_name / "SKILL.md"
                 self.emit_file(str(target), rendered, mode)
+
+    def _write_content_with_mode(
+        self, path: Path, new_content: str, existing_content: str, mode: str
+    ) -> None:
+        """Helper to handle the four modes of writing content."""
+        if mode == "dry-run":
+            return
+        if mode == "diff":
+            if existing_content != new_content:
+                diff = self._unified_diff(existing_content, new_content, str(path))
+                raise FileChangedError(str(path), diff)
+            return
+        if mode == "check":
+            if existing_content != new_content:
+                diff = self._unified_diff(existing_content, new_content, str(path))
+                raise FileChangedError(str(path), diff)
+            return
+        if mode == "write":
+            self._backup_if_needed(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self._atomic_write(path, new_content)
+            return
+        raise ValueError(f"Unknown mode: {mode!r}")
+
+    def emit_file(self, target_path: str, content: str, mode: str) -> None:
+        """Emit *content* to *target_path* using the given *mode*."""
+        path = Path(target_path)
+        full_content = self._prepend_marker(content)
+        existing_content = ""
+        if path.exists():
+            existing_content = path.read_text(encoding="utf-8")
+        elif mode == "check" or mode == "diff":
+            # If diff/check and it doesn't exist, we treat it as empty
+            # Wait, check mode for a missing file raised an error originally
+            if mode == "check":
+                raise FileChangedError(
+                    target_path, f"File {target_path!r} does not exist."
+                )
+            # If diff mode, we just diff against empty
+            pass
+
+        self._write_content_with_mode(path, full_content, existing_content, mode)
 
 
 class FileChangedError(Exception):
