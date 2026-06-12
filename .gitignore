@@ -9,3 +9,4 @@ dist/
 .jscpd/
 .ruff_cache/
 .web_stash.db
+.ai.tmp
