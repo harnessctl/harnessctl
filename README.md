@@ -1,181 +1,260 @@
-# harnessctl
+# harnessctl: The Unified AI Agent Orchestrator
 
-`harnessctl` is the operational nerve center for your AI agent swarm. It bridges the gap between high-level architectural intent and the low-level configuration of AI harnesses like OpenCode and Pi.dev.
-
-By enforcing a standardized **3-Tier Hub-and-Spoke Topology**, `harnessctl` ensures your agents remain cost-effective, specialized, and highly coordinated.
+`harnessctl` is a CLI tool for managing multi-agent topologies and model propagation across different AI harnesses (e.g., OpenCode, Pi.dev). It enforces a strict **Three-Tier Hub-and-Spoke** architecture to ensure cost-efficiency, reliability, and structured communication between agents.
 
 ---
 
 ## Table of Contents
 
-- [The Philosophy](#the-philosophy)
-- [Core Concepts](#core-concepts)
-  - [3-Tier Topology](#3-tier-topology)
-  - [The Verdict Protocol](#the-verdict-protocol)
-- [Installation](#installation)
-- [Quickstart](#quickstart)
-- [Specification Guide (agents.yaml)](#specification-guide-agentsyaml)
-  - [Tiers & Models](#tiers--models)
-  - [Agents & Roles](#agents--roles)
+- [Why harnessctl?](#why-harnessctl)
+- [The Three-Tier Architecture](#the-three-tier-architecture)
+- [Configuration Reference (agents.yaml)](#configuration-reference-agentsyaml)
+  - [Global Properties](#global-properties)
+  - [Harness Configuration](#harness-configuration)
+  - [Tiers & Model Mapping](#tiers--model-mapping)
+  - [Models & Sources](#models--sources)
+  - [Agent Topology](#agent-topology)
   - [MCP Servers](#mcp-servers)
-- [Advanced Usage](#advanced-usage)
-  - [The Template Engine](#the-template-engine)
-  - [Model Discovery & Recommendation](#model-discovery--recommendation)
 - [Command Reference](#command-reference)
-- [License](#license)
+  - [Lifecycle Commands](#lifecycle-commands)
+  - [Discovery & Model Intelligence](#discovery--model-intelligence)
+  - [Topology Visualization](#topology-visualization)
+- [The Verdict Protocol](#the-verdict-protocol)
+- [Template Fallback System](#template-fallback-system)
+- [Installation](#installation)
 
 ---
 
-## The Philosophy
+## Why harnessctl?
 
-Building complex systems with LLMs often leads to **"The Orchestration Mess"**:
+Managing AI agents is hard because of **Model Mismatch** (using expensive models for cheap tasks) and **Orchestration Drift** (configurations becoming inconsistent across different IDEs or environments).
 
-1. **Model Mismatch**: Using a $30/1M token model to write unit tests.
-2. **Context Bloat**: Subagents getting lost in huge prompts.
-3. **Fragile Hand-offs**: Agents not knowing how to escalate problems.
+`harnessctl` solves this by:
 
-`harnessctl` solves this by treating agents as **model-bound roles** with a strict communication contract.
-
----
-
-## Core Concepts
-
-### 3-Tier Topology
-
-We organize agents into three logical capability levels:
-
-| Tier            | Capability                                          | Example Models                         |
-| :-------------- | :-------------------------------------------------- | :------------------------------------- |
-| **Reasoning**   | Design docs, complex algorithms, critical review.   | `o3-mini`, `gpt-4o`, `claude-3-5-opus` |
-| **Balanced**    | Implementation planning, LLDs, feature development. | `claude-3-5-sonnet`, `gpt-4o-mini`     |
-| **Cheap/Local** | Boilerplate, tests, precise specs, low-latency.     | `llama3:8b`, `qwen2.5-coder`           |
-
-### The Verdict Protocol
-
-Agents don't just "talk"; they return **verdicts**. This allows the **Hub** (the orchestrator) to sequence work without needing to understand the content depth.
-
-- `DONE`: Task complete.
-- `APPROVED`: Validation passed.
-- `CHANGES{notes: "..."}`: Revision requested.
-- `ESCALATE{reason: "..."}`: Task exceeds tier capability.
-- `NEEDS_SPEC{gap: "..."}`: Ambiguous instructions.
+1.  **Standardizing** how agents are defined and how they communicate.
+2.  **Propagating** model choices, toolsets (MCP), and prompts to multiple harnesses from a single source of truth.
+3.  **Adapting** to your hardware by recommending the best models for your local RAM/VRAM.
 
 ---
 
-## Installation
+## The Three-Tier Architecture
 
-`harnessctl` is managed with `uv`.
+`harnessctl` defaults to a **Hub-and-Spoke** topology where one "Balanced" Hub orchestrates specialized workers:
 
-```bash
-# Install directly from GitHub
-uvx --from git+https://github.com/dragoscirjan/noname.git harnessctl --help
+| Tier            | Role               | Typical Models               | Use Case                                                |
+| :-------------- | :----------------- | :--------------------------- | :------------------------------------------------------ |
+| **Reasoning**   | The "Thinker"      | `gpt-4o`, `o3-mini`, `r1`    | Complex design, logic, and critical reviews.            |
+| **Balanced**    | The "Orchestrator" | `claude-3-5-sonnet`          | Routing, sequencing, and standard implementation.       |
+| **Cheap/Local** | The "Worker"       | `llama3:8b`, `qwen2.5-coder` | Boilerplate, unit tests, and well-defined coding tasks. |
 
-# Or for local development
-git clone https://github.com/dragoscirjan/noname.git
-cd noname
-uv sync
+---
+
+## Configuration Reference (`agents.yaml`)
+
+The `agents.yaml` file is divided into several logical sections. Below is an exhaustive list of all properties with examples.
+
+### Global Properties
+
+- `version`: (String) The spec version. Usually "1.0".
+
+### Harness Configuration
+
+Define where and how configurations are emitted.
+
+```yaml
+harness:
+  opencode: # Harness ID
+    capabilities:
+      supports_subagent_model: true # If false, harnessctl injects model name into the prompt
+      supports_tool_permissions: full # Options: full, partial, none
+      supports_mcp: true
+    scopes:
+      - name: global
+        kind: global # Options: global, project, custom
+        path: "~/.config/opencode"
+      - name: local
+        kind: project
+        path: "{project}/.opencode" # {project} resolves to the current project dir
 ```
 
----
+### Tiers & Model Mapping
 
-## Quickstart
-
-1.  **Initialize**: Generate your blueprint.
-    ```bash
-    harnessctl init
-    ```
-2.  **Discover**: See what's running locally.
-    ```bash
-    harnessctl models discover
-    ```
-3.  **Validate**: Ensure your topology is sound.
-    ```bash
-    harnessctl validate
-    ```
-4.  **Compile**: Push your swarm into the harness.
-    ```bash
-    harnessctl compile --mode write
-    ```
-
----
-
-## Specification Guide (`agents.yaml`)
-
-The `agents.yaml` is the source of truth for your swarm.
-
-### Tiers & Models
-
-Tiers abstract away specific model IDs, allowing you to swap backends without touching agent prompts.
+Map logical tiers to specific model identifiers.
 
 ```yaml
 tiers:
   reasoning:
     primary: gpt-4o
-    fallback: o3-mini
+    fallback: o3-mini # Optional
   balanced:
     primary: claude-3-5-sonnet
 ```
 
-### Agents & Roles
+### Models & Sources
 
-Agents map a role (Hub or Worker) to a capability Tier.
+Exhaustive definition of where models come from.
+
+```yaml
+models:
+  gpt-4o:
+    sources:
+      - via: openai # Options: openai, anthropic, openrouter, ollama, mlx, etc.
+        id: gpt-4o
+        key_ref: OPENAI_API_KEY # Env var name
+  llama3:
+    sources:
+      - via: ollama
+        id: llama3:8b
+        base_url: "http://localhost:11434"
+```
+
+### Agent Topology
+
+Define your agents and how they relate.
 
 ```yaml
 agents:
-  orchestrator:
-    role: hub
+  hub:
+    role: hub # Options: hub, worker
     tier: balanced
-    can_delegate: [researcher, coder]
+    can_delegate: [researcher, coder] # List of worker names
   researcher:
     role: worker
     tier: reasoning
-    escalates_to: orchestrator
+    escalates_to: hub # The agent to return to if overwhelmed
+  coder:
+    role: worker
+    tier: cheap_local
+    delegate_via: cli # (Optional) "cli" for out-of-process execution
 ```
 
 ### MCP Servers
 
-Standardize your toolbelt across all agents.
+Configure Model Context Protocol servers.
 
 ```yaml
 mcp:
   google-search:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-google-search"]
-```
-
----
-
-## Advanced Usage
-
-### The Template Engine
-
-`harnessctl` uses a priority-based inheritance system for Jinja2 templates. When compiling for an agent named `researcher` with role `worker` and tier `reasoning`:
-
-1.  **Direct Match**: `agents/researcher.md.j2`
-2.  **Role Fallback**: `agents/worker.md.j2`
-3.  **Tier Fallback**: `agents/reasoning.md.j2`
-
-### Model Discovery & Recommendation
-
-Don't guess which model fits your GPU. `harnessctl` probes your system (VRAM, CPU) and crosses it with live pricing data to recommend the optimal tier setup.
-
-```bash
-harnessctl models recommend "Write a complex Rust backend" --tier reasoning
+    env:
+      GOOGLE_API_KEY: "..."
+    disabled: false # (Optional) Default: false
 ```
 
 ---
 
 ## Command Reference
 
-| Command            | Description                                              |
-| :----------------- | :------------------------------------------------------- |
-| `init`             | Scaffold a default `agents.yaml`.                        |
-| `validate`         | Load and validate the spec file (checks cycles & depth). |
-| `compile`          | Render and emit configurations (OpenCode/Pi.dev).        |
-| `discover`         | Scan for local runtimes (Ollama, MLX).                   |
-| `agents show`      | Render the agent topology as a visual tree.              |
-| `models list`      | Show all models with pricing and context windows.        |
-| `models recommend` | Recommend a model for a specific task.                   |
+### Lifecycle Commands
+
+#### `init`
+
+Scaffold a default `agents.yaml` spec file.
+
+```bash
+# Creates agents.yaml in the current directory
+harnessctl init
+
+# Create with a custom name
+harnessctl init --config my-swarm.yaml
+```
+
+#### `validate`
+
+Perform a deep semantic check of your spec.
+
+```bash
+# Validates cycles, tier resolution, and harness capabilities
+harnessctl validate
+```
+
+#### `compile`
+
+The core engine. Renders prompts and generates config files.
+
+```bash
+# Write configs to all enabled harnesses
+harnessctl compile --mode write
+
+# Preview changes without writing (shows diffs)
+harnessctl compile --mode diff
+
+# Run in CI to check if configs are in sync with spec
+harnessctl compile --mode check # Exits with code 3 if drift detected
+```
+
+### Discovery & Model Intelligence
+
+#### `discover`
+
+Probe the local system for running Ollama or MLX instances.
+
+```bash
+harnessctl discover
+```
+
+#### `models list`
+
+Show all models defined in your spec.
+
+```bash
+harnessctl models list
+```
+
+#### `models recommend`
+
+Recommend the best HuggingFace/Local model based on your system's RAM/VRAM.
+
+```bash
+harnessctl models recommend "Write a distributed database in Rust"
+```
+
+### Topology Visualization
+
+#### `agents show`
+
+Render the agent delegation tree in your terminal.
+
+```bash
+harnessctl agents show
+```
+
+---
+
+## The Verdict Protocol
+
+Agents don't just provide text; they are prompted to conclude with a structured **Verdict**. This is the key to the Hub-and-Spoke model.
+
+1.  **DONE**: Success. No further action.
+2.  **APPROVED**: Review passed. Artifact accepted.
+3.  **CHANGES{notes: "..."}**: Specific feedback for revision.
+4.  **ESCALATE{reason: "..."}**: Too complex for current tier. Orchestrator reroutes to a higher tier.
+5.  **NEEDS_SPEC{gap: "..."}**: Instructions were ambiguous. Orchestrator refines and redispatches.
+
+---
+
+## Template Fallback System
+
+Prompts are rendered using Jinja2. `harnessctl` searches for templates in this order:
+
+1.  **Agent Specific**: `agents/researcher.md.j2`
+2.  **Role Generic**: `agents/worker.md.j2`
+3.  **Tier Generic**: `agents/reasoning.md.j2`
+
+This allows you to define one "Reasoning Worker" prompt that applies to all thinkers, while overriding it only when a specific agent needs unique instructions.
+
+---
+
+## Installation
+
+```bash
+# Standard install via uv
+uv tool install git+https://github.com/dragoscirjan/noname.git
+
+# Run directly without installing
+uvx --from git+https://github.com/dragoscirjan/noname.git harnessctl
+```
 
 ---
 
