@@ -1,6 +1,6 @@
 
 - [ ] **init** -> Scaffold a default agents.yaml configuration.
-  - [ ] *--path* -> Path to create the spec file. [default: agents.yaml] Okay. You know them.
+  - [ ] *--path* -> Path to create the spec file. [default: agents.yaml]
 - [ ] **validate** -> Load and validate the spec file, printing any warnings.
   - [ ] TODO: Must define a JSON/YAML schema for this process
 - [ ] **compile** -> Render and emit configurations to target harnesses.

@@ -25,6 +25,7 @@ def test_detect_system_linux_basic(mock_psutil):
         patch("platform.machine", return_value="x86_64"),
         patch("harnessctl.sysprobe.profile.pynvml", None),
         patch("subprocess.check_output", side_effect=FileNotFoundError),
+        patch("harnessctl.sysprobe.profile.Path.glob", return_value=[]),
     ):
         profile = detect_system()
         assert profile.os == "linux"

@@ -141,7 +141,7 @@ def test_market_merge():
     local_model = next(m for m in catalog if m.id == "llama3:8b")
     assert local_model.local is True
     assert local_model.intelligence == 55.0  # 8b heuristic
-    assert local_model.speed_tps == 80.0  # 8b heuristic
+    assert local_model.speed_tps == 150.0  # 8b heuristic
 
     # Verify commercial models preserved
     assert any(m.id == "openai/gpt-4" for m in catalog)

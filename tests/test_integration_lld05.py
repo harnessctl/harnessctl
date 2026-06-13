@@ -2,6 +2,7 @@ import yaml
 from unittest.mock import patch, Mock
 from harnessctl.sysprobe.profile import detect_system
 from harnessctl.recommend.ranker import search_candidates
+from harnessctl.recommend.intent import analyze_intent
 from harnessctl.pull.sources import parse_source
 from harnessctl.pull.huggingface import HuggingFaceDownloader
 from harnessctl.expose.matrix import resolve_best_format
@@ -29,18 +30,17 @@ def test_integration_recommend_pull_register(tmp_path):
         patch("huggingface_hub.HfApi.list_models", return_value=[mock_model]),
         patch("huggingface_hub.HfApi.list_repo_files", return_value=mock_files),
     ):
-        candidates = search_candidates(profile, limit=1)
+        intent = analyze_intent("Recommend a small model")
+        candidates = search_candidates(profile, intent, limit=1)
         assert len(candidates) > 0
         best_candidate = candidates[0]
 
     # 3. Simulate pull
-    source_str = f"hf:{best_candidate.repo_id}:{mock_files[0]}"
+    source_str = f"hf:{best_candidate.id}:{mock_files[0]}"
     source = parse_source(source_str)
 
     downloader = HuggingFaceDownloader(cache_dir=tmp_path)
-    mock_download_path = (
-        tmp_path / "huggingface" / best_candidate.repo_id / mock_files[0]
-    )
+    mock_download_path = tmp_path / "huggingface" / best_candidate.id / mock_files[0]
     mock_download_path.parent.mkdir(parents=True, exist_ok=True)
     mock_download_path.touch()
 
