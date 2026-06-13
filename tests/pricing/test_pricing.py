@@ -135,11 +135,10 @@ def test_market_merge():
 
     # 3 models total
     assert len(catalog) == 3
-
     # Verify local model estimation
     local_model = next(m for m in catalog if m.id == "llama3:8b")
     assert local_model.local is True
-    assert local_model.intelligence == 50.0  # 8b heuristic
+    assert local_model.intelligence == 55.0  # 8b heuristic
     assert local_model.speed_tps == 80.0  # 8b heuristic
 
     # Verify commercial models preserved

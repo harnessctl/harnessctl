@@ -57,7 +57,9 @@ async def test_ollama_probe(mock_get):
 @pytest.mark.asyncio
 @patch("httpx.AsyncClient.get")
 async def test_openai_compat_probe(mock_get):
-    mock_get.return_value = MagicMock(json=lambda: {"data": [{"id": "gpt-4"}]})
+    mock_get.return_value = MagicMock(
+        status_code=200, json=lambda: {"data": [{"id": "gpt-4"}]}
+    )
     p = OpenAICompatProbe(runtime="lmstudio", endpoint="http://localhost:1234/v1")
     res = await p.probe()
     assert len(res) == 1
