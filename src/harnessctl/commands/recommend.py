@@ -34,6 +34,10 @@ def recommend_cmd(
     max_price: float = typer.Option(
         float("inf"), "--max-price", help="Max price per MTok (output)."
     ),
+    min_context: int = typer.Option(0, "--min-context", help="Min context window."),
+    max_context: int = typer.Option(
+        2**31 - 1, "--max-context", help="Max context window."
+    ),
     local_only: bool = typer.Option(
         False, "--local", help="Recommend only local models."
     ),
@@ -76,6 +80,8 @@ def recommend_cmd(
             max_speed=max_speed,
             min_price=min_price,
             max_price=max_price,
+            min_context=min_context,
+            max_context=max_context,
             local_only=local_only,
             commercial_only=commercial_only,
         )

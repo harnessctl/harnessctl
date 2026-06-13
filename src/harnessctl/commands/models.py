@@ -124,6 +124,10 @@ def list_cmd(
     max_price: float = typer.Option(
         float("inf"), "--max-price", help="Max price per MTok (output)."
     ),
+    min_context: int = typer.Option(0, "--min-context", help="Min context window."),
+    max_context: int = typer.Option(
+        2**31 - 1, "--max-context", help="Max context window."
+    ),
     refresh: bool = typer.Option(False, "--refresh", help="Force refresh market data."),
     reindex: bool = typer.Option(
         False, "--reindex", help="Clear cache and re-probe all services."
@@ -170,13 +174,14 @@ def list_cmd(
                 if grep.lower() in m.id.lower() or grep.lower() in m.name.lower()
             ]
 
-        # Performance/Price Filtering
+        # Performance/Price/Context Filtering
         catalog = [
             m
             for m in catalog
             if min_intel <= m.intelligence <= max_intel
             and min_speed <= m.speed_tps <= max_speed
             and min_price <= m.output_per_mtok <= max_price
+            and min_context <= m.context_window <= max_context
         ]
 
         # 3. Sort

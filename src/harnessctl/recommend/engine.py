@@ -68,6 +68,8 @@ class RecommendationEngine:
         max_speed: float = float("inf"),
         min_price: float = 0,
         max_price: float = float("inf"),
+        min_context: int = 0,
+        max_context: int = 2**31 - 1,
         local_only: bool = False,
         commercial_only: bool = False,
     ) -> List[MarketModel]:
@@ -84,12 +86,14 @@ class RecommendationEngine:
             if commercial_only and m.local:
                 continue
 
-            # 2. Performance/Price Filtering
+            # 2. Performance/Price/Context Filtering
             if not (min_intel <= m.intelligence <= max_intel):
                 continue
             if not (min_speed <= m.speed_tps <= max_speed):
                 continue
             if not (min_price <= m.output_per_mtok <= max_price):
+                continue
+            if not (min_context <= m.context_window <= max_context):
                 continue
 
             # 3. Hardware check for local models
