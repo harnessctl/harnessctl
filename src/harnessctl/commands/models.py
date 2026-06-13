@@ -27,6 +27,70 @@ async def _get_local_models() -> List:
     return await run_probes(probes)
 
 
+@models_app.command(name="providers")
+def list_providers_cmd(
+    ctx: typer.Context,
+    refresh: bool = typer.Option(
+        False, "--refresh", help="Force refresh market data from registry."
+    ),
+):
+    """List available model providers and their model counts."""
+
+    async def _async_list():
+        warnings = ctx.obj.warnings
+
+        with console.status("[bold green]Fetching provider registry..."):
+            market_models = await fetch_market_data(warnings, force_refresh=refresh)
+
+        # Count models per provider
+        from collections import Counter
+
+        counts = Counter(m.provider for m in market_models)
+
+        # Provider mappings for "inventive" metadata (URLs)
+        # Note: In a real app, this could be a registry. For now, we heuristic-map common ones.
+        provider_urls = {
+            "openai": "https://openai.com",
+            "anthropic": "https://anthropic.com",
+            "google": "https://ai.google.dev",
+            "vertex": "https://cloud.google.com/vertex-ai",
+            "mistral": "https://mistral.ai",
+            "cohere": "https://cohere.com",
+            "ollama": "https://ollama.com",
+            "deepseek": "https://deepseek.com",
+            "openrouter": "https://openrouter.ai",
+            "groq": "https://groq.com",
+            "together": "https://together.ai",
+            "fireworks": "https://fireworks.ai",
+            "bedrock": "https://aws.amazon.com/bedrock",
+            "perplexity": "https://perplexity.ai",
+            "xai": "https://x.ai",
+        }
+
+        table = Table(title="Model Providers", box=box.ROUNDED)
+        table.add_column("Provider ID", style="cyan")
+        table.add_column("Models", justify="right", style="green")
+        table.add_column("URL", style="blue")
+
+        for provider, count in sorted(counts.items()):
+            url = provider_urls.get(provider.lower(), "—")
+            # If the provider name is complex (e.g. vertex_ai-anthropic), try to find a base match
+            if url == "—":
+                for key, val in provider_urls.items():
+                    if key in provider.lower():
+                        url = val
+                        break
+
+            table.add_row(provider, str(count), url)
+
+        console.print(table)
+        console.print(
+            f"\n[dim]Total: {len(counts)} providers found via registry.[/dim]"
+        )
+
+    asyncio.run(_async_list())
+
+
 @models_app.command(name="list")
 def list_cmd(
     ctx: typer.Context,
