@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-CACHE_DIR = Path(os.path.expanduser("~/.cache/harnessctl/pricing"))
+CACHE_DIR = Path(os.path.expanduser("~/.local/share/harnessctl/pricing"))
 
 
 def get_cache_path(source: str) -> Path:
@@ -45,3 +45,13 @@ def write_cache(source: str, data: Dict[str, Any]) -> None:
     path = get_cache_path(source)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f)
+
+
+def clear_cache() -> None:
+    """Clear all pricing cache files."""
+    if CACHE_DIR.exists():
+        for f in CACHE_DIR.glob("*.json"):
+            try:
+                f.unlink()
+            except Exception:
+                pass

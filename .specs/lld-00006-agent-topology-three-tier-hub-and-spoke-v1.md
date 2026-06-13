@@ -3,7 +3,7 @@ id: "00006"
 type: lld
 title: "Agent Topology Three Tier Hub and Spoke"
 version: 1
-status: draft
+status: deprecated
 parent: "00001"
 opencode-agent: lead-engineer
 ---

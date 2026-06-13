@@ -196,11 +196,36 @@ harnessctl discover
 
 #### `models list`
 
-Show all models defined in your spec.
+Show a unified view of all existing models on the market and those discovered locally. Includes **Intelligence**, **Speed**, and **Price** metrics.
 
 ```bash
+# List all models (commercial + local), sorted by intelligence
 harnessctl models list
+
+# Filter for local models only (Ollama, MLX, LM Studio)
+harnessctl models list --local
+
+# Filter for commercial models only (OpenRouter)
+harnessctl models list --commercial
+
+# Sort by speed and filter by name
+harnessctl models list --sort-by speed --grep claude
 ```
+
+**Metrics Explanation:**
+
+- **Intelligence**: Normalized 0-100 score based on **Artificial Analysis** and **LMSYS** benchmarks.
+- **Speed**: Represented as **Tokens Per Second (TPS)**. Commercial data is pulled from provider medians; local speed is estimated based on model parameters.
+- **Price**: Real-time USD per 1 Million tokens (Input/Output).
+
+**Local Tool Detection:**
+Before listing, `harnessctl` probes for active local services. It reports status for:
+
+- **Ollama** (Port 11434)
+
+* **LM Studio** (Port 1234)
+* **Llama.cpp** (Port 8080)
+* **MLX** (Mac only, process check)
 
 #### `models recommend`
 

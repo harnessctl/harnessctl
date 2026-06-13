@@ -3,7 +3,7 @@ id: "00003"
 type: lld
 title: "MCP and Model Propagation"
 version: 1
-status: draft
+status: deprecated
 parent: "00001"
 opencode-agent: lead-engineer
 ---

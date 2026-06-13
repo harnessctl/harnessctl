@@ -3,7 +3,7 @@ id: "00001"
 type: lld
 title: "Canonical Spec and Schema"
 version: 1
-status: draft
+status: deprecated
 opencode-agent: lead-engineer
 ---
 

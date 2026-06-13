@@ -3,7 +3,7 @@ id: "00008"
 type: lld
 title: "Model Recommender Puller and Multi-Engine Exposure"
 version: 1
-status: draft
+status: deprecated
 parent: "00001"
 opencode-agent: lead-engineer
 ---
@@ -107,4 +107,3 @@ harnesses see it.
 - Ollama CLI present when Ollama import is requested.
 - macOS + Apple Silicon assumed for any MLX path; Linux focuses on GGUF.
 - Quant naming follows common GGUF conventions (Q4_K_M etc.) for estimate heuristics.
-

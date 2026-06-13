@@ -2,121 +2,203 @@ from typing import List, Optional
 from dataclasses import dataclass
 from huggingface_hub import HfApi
 from harnessctl.recommend.estimate import estimate_footprint, fits_in_memory
+from harnessctl.recommend.intent import TaskIntent
 from harnessctl.sysprobe.profile import SystemProfile
+from harnessctl.pricing.market import MarketModel
 
 
 @dataclass
 class RankedModel:
-    repo_id: str
-    quant: str
-    params_billion: float
-    estimated_memory_gb: float
-    backend: str  # e.g., "llama.cpp", "mlx"
+    id: str  # Can be repo_id or Cloud ID
+    provider: str  # "huggingface", "google", "openrouter", etc.
+    quant: Optional[str]
+    params_billion: Optional[float]
+    estimated_memory_gb: Optional[float]
+    backend: str  # "llama.cpp", "cloud"
     score: float
-    context_window: int = 4096  # default
-    size_bytes: Optional[int] = None
+    is_cloud: bool = False
+    intelligence: float = 0.0
+    intelligence_source: str = "heuristic"
+    speed_tps: float = 0.0
+    input_per_mtok: float = 0.0
+    output_per_mtok: float = 0.0
+    context_window: int = 4096
 
 
 def search_candidates(
     profile: SystemProfile,
-    tags: List[str] = ["gguf", "coding", "instruct"],
+    intent: TaskIntent,
+    market_data: List[MarketModel] = [],
+    include_local: bool = True,
+    include_commercial: bool = True,
+    provider_filter: Optional[str] = None,
     limit: int = 10,
 ) -> List[RankedModel]:
-    """Search and rank HF models based on system fit and capability."""
-    api = HfApi()
-
-    # Filter models by tags
-    models = api.list_models(
-        tags=tags,
-        sort="downloads",
-        direction=-1,
-        limit=limit * 2,  # Fetch more to allow for filtering
-    )
-
+    """Search and rank models based on system fit, intent, and market availability."""
     candidates = []
-    for model in models:
-        try:
-            # Check for GGUF files
-            files = api.list_repo_files(model.modelId)
-            gguf_files = [f for f in files if f.endswith(".gguf")]
-            if not gguf_files:
+
+    # 1. Local Search (HuggingFace)
+    if include_local:
+        if provider_filter and "huggingface" not in provider_filter.lower():
+            pass  # Skip if provider filtered and not HF
+        else:
+            api = HfApi()
+            tags = ["gguf", "instruct"]
+            if intent.is_coding:
+                tags.append("coding")
+
+            # Adjust search based on complexity
+            search_limit = limit * 2
+            if intent.complexity > 60:
+                search_limit *= 2  # Look for more models for complex tasks
+
+            models = api.list_models(
+                filter=tags,
+                sort="downloads",
+                limit=search_limit,
+            )
+
+            for model in models:
+                try:
+                    # Check for GGUF files
+                    files = api.list_repo_files(model.modelId)
+                    gguf_files = [f for f in files if f.endswith(".gguf")]
+                    if not gguf_files:
+                        continue
+
+                    available_quants = []
+                    for f in gguf_files:
+                        for q in ["Q4_K_M", "Q5_K_M", "Q6_K", "Q8_0", "F16"]:
+                            if q in f:
+                                available_quants.append((q, f))
+                                break
+
+                    if not available_quants:
+                        continue
+
+                    params_billion = 7.0
+                    import re
+
+                    m = re.search(r"(\d+(\.\d+)?)b", model.modelId.lower())
+                    if m:
+                        params_billion = float(m.group(1))
+
+                    for quant, _ in available_quants:
+                        if fits_in_memory(profile, int(params_billion), quant):
+                            est_gb = estimate_footprint(int(params_billion), quant)
+                            from harnessctl.recommend.estimate import QUANT_BITS
+
+                            # Base score on params and bit depth
+                            score = params_billion * QUANT_BITS.get(quant, 4.0)
+
+                            # Complexity adjustment: High complexity tasks penalize small models
+                            if intent.complexity > 70 and params_billion < 10:
+                                score *= 0.5
+
+                            if intent.is_coding and "code" in model.modelId.lower():
+                                score *= 1.3
+
+                            from harnessctl.pricing.catalog import (
+                                estimate_local_metrics,
+                            )
+
+                            intel, speed = estimate_local_metrics(model.modelId)
+
+                            candidates.append(
+                                RankedModel(
+                                    id=model.modelId,
+                                    provider="huggingface",
+                                    quant=quant,
+                                    params_billion=params_billion,
+                                    estimated_memory_gb=est_gb,
+                                    backend="llama.cpp",
+                                    score=score,
+                                    is_cloud=False,
+                                    intelligence=intel,
+                                    intelligence_source="heuristic",
+                                    speed_tps=speed,
+                                    context_window=32768,
+                                    input_per_mtok=0.0,
+                                    output_per_mtok=0.0,
+                                )
+                            )
+                except Exception:
+                    continue
+
+    # 2. Cloud Search (Market)
+    if include_commercial:
+        for m in market_data:
+            if provider_filter and provider_filter.lower() not in m.provider.lower():
                 continue
 
-            # Extract quant from filenames
-            available_quants = []
-            for f in gguf_files:
-                if "Q" in f or "F16" in f or "F32" in f:
-                    for q in [
-                        "Q2_K",
-                        "Q3_K_S",
-                        "Q3_K_M",
-                        "Q4_0",
-                        "Q4_K_S",
-                        "Q4_K_M",
-                        "Q5_K_S",
-                        "Q5_K_M",
-                        "Q6_K",
-                        "Q8_0",
-                        "F16",
-                        "F32",
-                    ]:
-                        if q in f:
-                            available_quants.append((q, f))
-                            break
-
-            if not available_quants:
+            # Only include high-intelligence models for cloud recommendations
+            # to avoid cluttering with low-tier providers
+            if m.intelligence < 50:
                 continue
 
-            # Estimate params from model name
-            params_billion = 7.0  # default
-            model_id_lower = model.modelId.lower()
-            import re
+            # Score based on intelligence and alignment with intent
+            score = m.intelligence * 1.5
 
-            m = re.search(r"(\d+(\.\d+)?)b", model_id_lower)
-            if m:
-                params_billion = float(m.group(1))
+            # Complexity Alignment
+            if intent.complexity > 50:
+                if m.intelligence > 90:
+                    score *= 3.0  # Massive bonus for SOTA on complex tasks
+                elif m.intelligence < 80:
+                    score *= 0.3  # Penalize mid-tier models for high complexity
 
-            # Evaluate each quantization for fit
-            for quant, filename in available_quants:
-                if fits_in_memory(profile, int(params_billion), quant):
-                    est_gb = estimate_footprint(int(params_billion), quant)
+            # 1. Reasoning Preference
+            if intent.prefers_reasoning:
+                if any(k in m.id.lower() for k in ["o1", "r1", "thought", "reasoning"]):
+                    score *= 5.0  # High priority for reasoning models
+                elif m.intelligence < 90:
+                    score *= 0.5  # De-prioritize lower intel for reasoning
 
-                    # Scoring: prefer larger models and higher quants that still fit
-                    # Score = params_billion * bits_per_param
-                    from harnessctl.recommend.estimate import QUANT_BITS
+            # 2. Cheap Preference
+            if intent.prefers_cheap:
+                # Factor in price: lower is better.
+                # Normalize against a "reasonable" price of $1.00
+                price_factor = 1.0 / (m.input_per_mtok + 0.05)
+                score *= price_factor * 0.5  # Blend price into score
 
-                    score = params_billion * QUANT_BITS.get(quant, 4.0)
+            # 3. Speed Preference
+            if intent.prefers_speed:
+                if m.speed_tps > 100:
+                    score *= 2.0
+                elif m.speed_tps < 30:
+                    score *= 0.5
 
-                    # Bonus for coding if requested
-                    if "coding" in tags and "code" in model_id_lower:
-                        score *= 1.2
+            if intent.is_coding and "coder" in m.id.lower():
+                score *= 1.2
 
-                    candidates.append(
-                        RankedModel(
-                            repo_id=model.modelId,
-                            quant=quant,
-                            params_billion=params_billion,
-                            estimated_memory_gb=est_gb,
-                            backend="mlx"
-                            if profile.gpu_kind == "metal" and "mlx" in model_id_lower
-                            else "llama.cpp",
-                            score=score,
-                            size_bytes=None,  # We'd need to fetch file info for this
-                        )
-                    )
-        except Exception:
-            # Skip models that fail to list files or other issues
-            continue
+            candidates.append(
+                RankedModel(
+                    id=m.id,
+                    provider=m.provider,
+                    quant=None,
+                    params_billion=None,
+                    estimated_memory_gb=0,
+                    backend="cloud",
+                    score=score,
+                    is_cloud=True,
+                    intelligence=m.intelligence,
+                    intelligence_source=m.intelligence_source,
+                    speed_tps=m.speed_tps,
+                    input_per_mtok=m.input_per_mtok,
+                    output_per_mtok=m.output_per_mtok,
+                    context_window=m.context_window,
+                )
+            )
 
-    # Sort by score descending and return top matches
+    # Final Ranking and Deduplication
     candidates.sort(key=lambda x: x.score, reverse=True)
 
-    # De-duplicate by repo_id, keeping the best quant for each
-    seen_repos = {}
-    unique_candidates = []
+    seen_ids = set()
+    final_results = []
     for c in candidates:
-        if c.repo_id not in seen_repos:
-            seen_repos[c.repo_id] = True
-            unique_candidates.append(c)
+        if c.id not in seen_ids:
+            seen_ids.add(c.id)
+            final_results.append(c)
+            if len(final_results) >= limit:
+                break
 
-    return unique_candidates[:limit]
+    return final_results
