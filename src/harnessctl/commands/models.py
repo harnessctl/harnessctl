@@ -44,16 +44,25 @@ def list_cmd(
     ),
     grep: Optional[str] = typer.Option(None, "--grep", help="Filter by name."),
     refresh: bool = typer.Option(False, "--refresh", help="Force refresh market data."),
+    reindex: bool = typer.Option(
+        False, "--reindex", help="Clear cache and re-probe all services."
+    ),
 ):
     """List existing models with intelligence, speed and price metrics."""
 
     async def _async_list():
         warnings = ctx.obj.warnings
 
+        if reindex:
+            from harnessctl.pricing.cache import clear_cache
+
+            clear_cache()
+            console.print("[yellow]Cache cleared. Re-probing services...[/yellow]")
+
         # 1. Probing and Discovery
         with console.status("[bold green]Probing services and fetching market data..."):
             services_task = get_all_services_status()
-            market_task = fetch_market_data(warnings, force_refresh=refresh)
+            market_task = fetch_market_data(warnings, force_refresh=refresh or reindex)
 
             # If not commercial-only, also discover local models
             local_models_task = (
