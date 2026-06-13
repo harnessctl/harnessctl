@@ -20,6 +20,17 @@ def recommend_cmd(
         "chat", help=f"Task profile: {', '.join(PROFILES.keys())}"
     ),
     limit: int = typer.Option(5, "--limit", "-n", help="Number of recommendations."),
+    min_intel: float = typer.Option(0, "--min-intel", help="Min intelligence (0-100)."),
+    max_intel: float = typer.Option(
+        100, "--max-intel", help="Max intelligence (0-100)."
+    ),
+    min_speed: float = typer.Option(0, "--min-speed", help="Min speed (TPS)."),
+    max_speed: float = typer.Option(
+        float("inf"), "--max-speed", help="Max speed (TPS)."
+    ),
+    min_price: float = typer.Option(
+        0, "--min-price", help="Min price per MTok (output)."
+    ),
     max_price: float = typer.Option(
         float("inf"), "--max-price", help="Max price per MTok (output)."
     ),
@@ -59,6 +70,11 @@ def recommend_cmd(
             catalog,
             profile_name=profile,
             limit=limit,
+            min_intel=min_intel,
+            max_intel=max_intel,
+            min_speed=min_speed,
+            max_speed=max_speed,
+            min_price=min_price,
             max_price=max_price,
             local_only=local_only,
             commercial_only=commercial_only,

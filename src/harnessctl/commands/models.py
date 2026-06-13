@@ -110,6 +110,20 @@ def list_cmd(
         None, "--provider", help="Filter by provider (e.g. openai, anthropic, ollama)."
     ),
     grep: Optional[str] = typer.Option(None, "--grep", help="Filter by name."),
+    min_intel: float = typer.Option(0, "--min-intel", help="Min intelligence (0-100)."),
+    max_intel: float = typer.Option(
+        100, "--max-intel", help="Max intelligence (0-100)."
+    ),
+    min_speed: float = typer.Option(0, "--min-speed", help="Min speed (TPS)."),
+    max_speed: float = typer.Option(
+        float("inf"), "--max-speed", help="Max speed (TPS)."
+    ),
+    min_price: float = typer.Option(
+        0, "--min-price", help="Min price per MTok (output)."
+    ),
+    max_price: float = typer.Option(
+        float("inf"), "--max-price", help="Max price per MTok (output)."
+    ),
     refresh: bool = typer.Option(False, "--refresh", help="Force refresh market data."),
     reindex: bool = typer.Option(
         False, "--reindex", help="Clear cache and re-probe all services."
@@ -155,6 +169,15 @@ def list_cmd(
                 for m in catalog
                 if grep.lower() in m.id.lower() or grep.lower() in m.name.lower()
             ]
+
+        # Performance/Price Filtering
+        catalog = [
+            m
+            for m in catalog
+            if min_intel <= m.intelligence <= max_intel
+            and min_speed <= m.speed_tps <= max_speed
+            and min_price <= m.output_per_mtok <= max_price
+        ]
 
         # 3. Sort
         reverse = direction.lower() == "desc"
