@@ -66,7 +66,9 @@ def list_providers_cmd(
             "perplexity": "https://perplexity.ai",
             "xai": "https://x.ai",
             "github": "https://github.com/marketplace/models",
+            "github-models": "https://github.com/marketplace/models",
             "copilot": "https://github.com/features/copilot",
+            "github-copilot": "https://github.com/features/copilot",
         }
 
         table = Table(title="Model Providers", box=box.ROUNDED)
