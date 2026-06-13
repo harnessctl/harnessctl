@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from harnessctl.pricing.catalog import MarketModel
 from harnessctl.pricing.common import fetch_prices_generic
 from harnessctl.spec.warnings import WarningCollector
@@ -6,24 +6,31 @@ from harnessctl.spec.warnings import WarningCollector
 OPENROUTER_URL = "https://openrouter.ai/api/v1/models"
 
 
-def get_intelligence_score(model_data: Dict[str, Any]) -> float:
-    """Extract intelligence score from OpenRouter benchmarks."""
+def get_intelligence_score(model_data: Dict[str, Any]) -> Tuple[float, str]:
+    """Extract intelligence score and source from OpenRouter benchmarks."""
     benchmarks = model_data.get("benchmarks", {})
     aa = benchmarks.get("artificial_analysis", {})
 
     # Priority 1: Artificial Analysis Intelligence Index
     intel = aa.get("intelligence_index")
     if intel is not None:
-        # OpenRouter returns the raw index value.
-        # According to AA methodology, this is often a percentage (0-100).
-        # We'll treat it as such.
-        return float(intel)
+        # Artificial Analysis Intelligence Index normalization.
+        # 65 (SOTA) -> ~98
+        val = float(intel)
+        return min(99.0, val * 1.5), "benchmark"
 
     # Priority 2: Design Arena ELO (Normalized)
     da = benchmarks.get("design_arena")
-    if isinstance(da, dict) and da.get("elo") is not None:
-        elo = float(da["elo"])
-        return max(0.0, min(100.0, (elo - 1000) / 4))
+    if isinstance(da, list) and len(da) > 0:
+        # OpenRouter returns a list of arena categories
+        # We'll take the max ELO found across categories
+        elos = [float(item["elo"]) for item in da if "elo" in item]
+        if elos:
+            max_elo = max(elos)
+            # Normalize: 1000 (Base) -> 1300+ (SOTA)
+            # (1300 - 1000) / 3.2 = 93.75
+            score = max(0.0, min(100.0, (max_elo - 1000) / 3.2))
+            return score, "elo"
 
     # Priority 3: Name-based heuristics (Last resort)
     name = model_data.get("id", "").lower()
@@ -32,28 +39,29 @@ def get_intelligence_score(model_data: Dict[str, Any]) -> float:
         for k in [
             "o1",
             "claude-3-5",
+            "fable",
             "gpt-4o",
             "deepseek-v3",
             "deepseek-r1",
             "gemini-2.0",
         ]
     ):
-        return 95.0
+        return 95.0, "heuristic"
     if any(
         k in name
         for k in ["opus", "gpt-4", "llama-3.1-405b", "smaug", "gemini-1.5-pro"]
     ):
-        return 90.0
+        return 90.0, "heuristic"
     if any(
         k in name for k in ["sonnet", "llama-3.1-70b", "qwen2.5-72b", "deepseek-v2.5"]
     ):
-        return 80.0
+        return 80.0, "heuristic"
     if any(k in name for k in ["haiku", "flash", "mini", "8b", "llama-3.1-8b"]):
-        return 55.0
+        return 55.0, "heuristic"
     if any(k in name for k in ["coder", "qwen", "gemma"]):
-        return 65.0
+        return 65.0, "heuristic"
 
-    return 40.0
+    return 40.0, "heuristic"
 
 
 def get_speed_score(model_data: Dict[str, Any]) -> float:
@@ -92,6 +100,7 @@ async def fetch_openrouter_market(
             input_per_mtok = float(pricing.get("prompt", 0)) * 1_000_000
             output_per_mtok = float(pricing.get("completion", 0)) * 1_000_000
 
+            intel, intel_src = get_intelligence_score(item)
             market_models.append(
                 MarketModel(
                     id=model_id,
@@ -100,7 +109,8 @@ async def fetch_openrouter_market(
                     input_per_mtok=input_per_mtok,
                     output_per_mtok=output_per_mtok,
                     context_window=item.get("context_length", 0),
-                    intelligence=get_intelligence_score(item),
+                    intelligence=intel,
+                    intelligence_source=intel_src,
                     speed_tps=get_speed_score(item),
                     local=False,
                     status="available",
@@ -157,6 +167,7 @@ async def fetch_litellm_market(
 
             # Map LiteLLM provider
             provider = info.get("litellm_provider", "commercial")
+            intel, intel_src = get_intelligence_score({"id": model_id})
 
             market_models.append(
                 MarketModel(
@@ -167,7 +178,8 @@ async def fetch_litellm_market(
                     output_per_mtok=output_per_mtok,
                     context_window=context_window,
                     # For LiteLLM, we only have name-based heuristics
-                    intelligence=get_intelligence_score({"id": model_id}),
+                    intelligence=intel,
+                    intelligence_source=intel_src,
                     speed_tps=get_speed_score({"id": model_id}),
                     local=False,
                     status="available",

@@ -230,7 +230,13 @@ def list_cmd(
             )
             price_color = "red" if m.input_per_mtok > 10 else "white"
 
-            intel_str = f"[{intel_color}]{m.intelligence:.0f}[/{intel_color}]"
+            # Intelligence Source Indicator
+            src_map = {"benchmark": "★", "elo": "○", "heuristic": "≈"}
+            src_indicator = src_map.get(m.intelligence_source, "")
+
+            intel_str = (
+                f"[{intel_color}]{m.intelligence:.0f}[/{intel_color}]{src_indicator}"
+            )
             speed_str = f"{m.speed_tps:.0f}" if m.speed_tps > 0 else "—"
 
             if m.local:
@@ -247,6 +253,9 @@ def list_cmd(
             table.add_row(m.id, m.provider, intel_str, speed_str, price_str, ctx_str)
 
         console.print(table)
+        console.print(
+            "\n[dim]Intel Sources: ★ Benchmark (Artificial Analysis), ○ ELO (Design Arena), ≈ Heuristic[/dim]"
+        )
 
     asyncio.run(_async_list())
 

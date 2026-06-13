@@ -21,7 +21,11 @@ async def fetch_prices_generic(
         try:
             response = await client.get(url, timeout=10)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            from harnessctl.pricing.cache import write_cache
+
+            write_cache(provider_name, data)
+            return data
         except Exception as e:
             warnings.add_warning(
                 f"Failed to fetch {provider_name} prices: {e}. Falling back to stale cache."

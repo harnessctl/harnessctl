@@ -13,6 +13,7 @@ class MarketModel:
     output_per_mtok: float
     context_window: int
     intelligence: float  # 0-100
+    intelligence_source: str  # "benchmark", "elo", "heuristic"
     speed_tps: float  # Tokens per second
     local: bool
     status: str
@@ -91,6 +92,7 @@ def merge_market_data(
             output_per_mtok=0.0,
             context_window=32768,  # Default for most modern locals
             intelligence=intel,
+            intelligence_source="heuristic",
             speed_tps=speed,
             local=True,
             status="running",
