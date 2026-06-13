@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from harnessctl.pricing.catalog import MarketModel
 from harnessctl.sysprobe.profile import SystemProfile
 from harnessctl.recommend.estimate import estimate_footprint
+from harnessctl.commands.utils import apply_filters
 
 
 @dataclass
@@ -71,41 +72,28 @@ class RecommendationEngine:
     def filter_candidates(
         self,
         models: List[MarketModel],
-        min_intel: float = 0,
-        max_intel: float = 100,
-        min_speed: float = 0,
-        max_speed: float = float("inf"),
-        min_price: float = 0,
-        max_price: float = float("inf"),
-        min_context: int = 0,
-        max_context: int = 2**31 - 1,
         local_only: bool = False,
         commercial_only: bool = False,
+        **filters,
     ) -> List[MarketModel]:
         """Filter models based on hardware constraints, performance metrics and user preferences."""
-        candidates = []
+        # 1. Performance/Price/Context Filtering
+        candidates = apply_filters(models, **filters)
+
+        # 2. Type and Hardware Filtering
+        final_candidates = []
         available_mem = self.sys_profile.ram_gb
         if self.sys_profile.vram_gb:
             available_mem += self.sys_profile.vram_gb
 
-        for m in models:
-            # 1. Type Filtering
+        for m in candidates:
+            # Type Filtering
             if local_only and not m.local:
                 continue
             if commercial_only and m.local:
                 continue
 
-            # 2. Performance/Price/Context Filtering
-            if not (min_intel <= m.intelligence <= max_intel):
-                continue
-            if not (min_speed <= m.speed_tps <= max_speed):
-                continue
-            if not (min_price <= m.output_per_mtok <= max_price):
-                continue
-            if not (min_context <= m.context_window <= max_context):
-                continue
-
-            # 3. Hardware check for local models
+            # Hardware check for local models
             if m.local:
                 # Extract params from ID (heuristic)
                 import re
@@ -121,8 +109,8 @@ class RecommendationEngine:
                     if est_mem > available_mem * 0.9:  # Leave 10% buffer
                         continue
 
-            candidates.append(m)
-        return candidates
+            final_candidates.append(m)
+        return final_candidates
 
     def recommend(
         self,

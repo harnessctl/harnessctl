@@ -13,6 +13,7 @@ from harnessctl.discovery.base import run_probes
 from harnessctl.discovery.ollama import OllamaProbe
 from harnessctl.discovery.mlx import MLXProbe
 from harnessctl.discovery.openai_compat import OpenAICompatProbe
+from harnessctl.commands.utils import apply_filters
 
 console = Console()
 models_app = typer.Typer(help="Manage and discover models.")
@@ -179,14 +180,17 @@ def list_cmd(
             ]
 
         # Performance/Price/Context Filtering
-        catalog = [
-            m
-            for m in catalog
-            if min_intel <= m.intelligence <= max_intel
-            and min_speed <= m.speed_tps <= max_speed
-            and min_price <= m.output_per_mtok <= max_price
-            and min_context <= m.context_window <= max_context
-        ]
+        catalog = apply_filters(
+            catalog,
+            min_intel,
+            max_intel,
+            min_speed,
+            max_speed,
+            min_price,
+            max_price,
+            min_context,
+            max_context,
+        )
 
         # 3. Sort
         reverse = direction.lower() == "desc"
