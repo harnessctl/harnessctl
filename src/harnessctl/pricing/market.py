@@ -215,4 +215,39 @@ async def fetch_market_data(
     for model in results[0]:
         catalog[model.id] = model
 
+    # 3. Static/Provider-specific Overrides (e.g. GitHub/Copilot)
+    # If these are missing from upstream registries, we can inject key models here.
+    static_overrides = [
+        MarketModel(
+            id="github/gpt-4o",
+            name="GPT-4o (GitHub)",
+            provider="github",
+            input_per_mtok=0.0,
+            output_per_mtok=0.0,
+            context_window=128000,
+            intelligence=95.0,
+            intelligence_source="heuristic",
+            speed_tps=80.0,
+            local=False,
+            status="available",
+        ),
+        MarketModel(
+            id="copilot/claude-3.5-sonnet",
+            name="Claude 3.5 Sonnet (Copilot)",
+            provider="copilot",
+            input_per_mtok=0.0,
+            output_per_mtok=0.0,
+            context_window=200000,
+            intelligence=97.0,
+            intelligence_source="heuristic",
+            speed_tps=70.0,
+            local=False,
+            status="available",
+        ),
+    ]
+
+    for model in static_overrides:
+        if model.id not in catalog:
+            catalog[model.id] = model
+
     return list(catalog.values())
