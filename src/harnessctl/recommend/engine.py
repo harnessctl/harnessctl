@@ -12,13 +12,14 @@ class RecommendationProfile:
     intel_weight: float
     speed_weight: float
     price_weight: float
+    context_weight: float = 0.0
 
 
 PROFILES = {
-    "coding": RecommendationProfile("coding", 1.5, 0.8, 1.0),
-    "reasoning": RecommendationProfile("reasoning", 2.0, 0.5, 1.0),
-    "chat": RecommendationProfile("chat", 1.0, 1.0, 1.0),
-    "fast": RecommendationProfile("fast", 0.5, 2.0, 0.8),
+    "coding": RecommendationProfile("coding", 1.5, 0.8, 1.0, 0.5),
+    "reasoning": RecommendationProfile("reasoning", 2.0, 0.5, 1.0, 0.3),
+    "chat": RecommendationProfile("chat", 1.0, 1.0, 1.0, 0.0),
+    "fast": RecommendationProfile("fast", 0.5, 2.0, 0.8, 0.0),
 }
 
 
@@ -50,11 +51,19 @@ class RecommendationEngine:
             norm_price = 1.0 - (price_log + 3) / 6
             norm_price = max(0.0, min(1.0, norm_price))
 
+        # 4. Normalize Context (8k-2M -> 0-1)
+        # We use a log scale because context windows vary by orders of magnitude.
+        # log2(8000) ~ 13, log2(2000000) ~ 21
+        ctx = max(8000, model.context_window)
+        norm_context = (math.log2(ctx) - 13) / (21 - 13)
+        norm_context = max(0.0, min(1.0, norm_context))
+
         # Weighting
         score = (
             (norm_intel**task_profile.intel_weight)
             * (norm_speed**task_profile.speed_weight)
             * (norm_price**task_profile.price_weight)
+            * (norm_context**task_profile.context_weight)
         )
 
         return score
