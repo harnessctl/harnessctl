@@ -3,6 +3,7 @@ from harnessctl.discovery.base import run_probes
 from harnessctl.discovery.ollama import OllamaProbe
 from harnessctl.discovery.mlx import MLXProbe
 from harnessctl.discovery.openai_compat import OpenAICompatProbe
+from harnessctl.discovery.opencode import OpencodeProbe
 
 
 def discover_all():
@@ -11,6 +12,7 @@ def discover_all():
         OllamaProbe(),
         MLXProbe(),
         OpenAICompatProbe(runtime="lmstudio", endpoint="http://localhost:1234/v1"),
+        OpencodeProbe(),
     ]
 
     loop = asyncio.new_event_loop()

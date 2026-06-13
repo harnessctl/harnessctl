@@ -14,6 +14,7 @@ from harnessctl.commands.compile import compile_command
 from harnessctl.commands.models import models_app, discover_cmd
 from harnessctl.commands.agents import agents_app
 from harnessctl.commands.recommend import recommend_cmd
+from harnessctl.commands.auth import auth_app
 
 app = typer.Typer(
     help="harnessctl: Manage AI harness configurations and agents.",
@@ -70,6 +71,7 @@ app.command(name="discover")(discover_cmd)
 app.command(name="recommend")(recommend_cmd)
 app.add_typer(models_app, name="models")
 app.add_typer(agents_app, name="agents")
+app.add_typer(auth_app, name="auth")
 
 
 @app.command()

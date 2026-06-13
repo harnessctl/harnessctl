@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-CACHE_DIR = Path(os.path.expanduser("~/.cache/harnessctl/pricing"))
+CACHE_DIR = Path(os.path.expanduser("~/.local/share/harnessctl/pricing"))
 
 
 def get_cache_path(source: str) -> Path:

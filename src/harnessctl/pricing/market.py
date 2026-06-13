@@ -2,12 +2,18 @@ from typing import List, Dict, Any, Tuple
 from harnessctl.pricing.catalog import MarketModel
 from harnessctl.pricing.common import fetch_prices_generic
 from harnessctl.spec.warnings import WarningCollector
+from harnessctl.pricing.heuristics import (
+    get_intel_heuristic,
+    get_speed_heuristic,
+    get_pricing_heuristic,
+)
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/models"
 
 
 def get_intelligence_score(model_data: Dict[str, Any]) -> Tuple[float, str]:
     """Extract intelligence score and source from OpenRouter benchmarks."""
+    model_id = model_data.get("id", "")
     benchmarks = model_data.get("benchmarks", {})
     aa = benchmarks.get("artificial_analysis", {})
 
@@ -32,60 +38,44 @@ def get_intelligence_score(model_data: Dict[str, Any]) -> Tuple[float, str]:
             score = max(0.0, min(100.0, (max_elo - 1000) / 3.2))
             return score, "elo"
 
-    # Priority 3: Name-based heuristics (Last resort)
-    name = model_data.get("id", "").lower()
-    if any(
-        k in name
-        for k in [
-            "o1",
-            "claude-3-5",
-            "fable",
-            "gpt-4o",
-            "deepseek-v3",
-            "deepseek-r1",
-            "gemini-2.0",
-        ]
-    ):
-        return 95.0, "heuristic"
-    if any(
-        k in name
-        for k in ["opus", "gpt-4", "llama-3.1-405b", "smaug", "gemini-1.5-pro"]
-    ):
-        return 90.0, "heuristic"
-    if any(
-        k in name for k in ["sonnet", "llama-3.1-70b", "qwen2.5-72b", "deepseek-v2.5"]
-    ):
-        return 80.0, "heuristic"
-    if any(k in name for k in ["haiku", "flash", "mini", "8b", "llama-3.1-8b"]):
-        return 55.0, "heuristic"
-    if any(k in name for k in ["coder", "qwen", "gemma"]):
-        return 65.0, "heuristic"
+    # Priority 3: Name-based High-Confidence Matching (Not "guessing")
+    # If the ID clearly identifies a SOTA class, we give it a heuristic score.
+    # This allows discovered official models (github, google) to be ranked.
+    score = get_intel_heuristic(model_id)
+    if score > 0:
+        return score, "heuristic"
 
-    return 40.0, "heuristic"
+    # Priority 4: Default/Unknown
+    return 0.0, "heuristic"
 
 
 def get_speed_score(model_data: Dict[str, Any]) -> float:
     """Estimate speed (TPS) for commercial models."""
-    # Since OpenRouter doesn't provide numeric TPS, we use heuristics
-    # based on model class/name.
-    name = model_data.get("id", "").lower()
-
-    if any(k in name for k in ["mini", "flash", "haiku", "8b"]):
-        return 150.0
-    if any(k in name for k in ["sonnet", "4o", "70b"]):
-        return 70.0
-    if any(k in name for k in ["opus", "o1", "405b"]):
-        return 15.0
-
-    return 40.0
+    return get_speed_heuristic(model_data.get("id", ""))
 
 
 async def fetch_openrouter_market(
     warnings: WarningCollector, force_refresh: bool = False
 ) -> List[MarketModel]:
     """Fetch and process global market data from OpenRouter."""
+    from harnessctl.providers.manager import SecretsManager
+
+    secrets = SecretsManager()
+    token = secrets.get_token("openrouter")
+
+    if not token:
+        warnings.add(
+            field="openrouter_market",
+            reason="API key missing. Discovery skipped.",
+        )
+        return []
+
     data = await fetch_prices_generic(
-        "openrouter_market", OPENROUTER_URL, warnings, force_refresh=force_refresh
+        "openrouter_market",
+        OPENROUTER_URL,
+        warnings,
+        force_refresh=force_refresh,
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     if not data or "data" not in data:
@@ -196,112 +186,99 @@ async def fetch_market_data(
 ) -> List[MarketModel]:
     """Aggregate market data from multiple sources."""
     import asyncio
+    from harnessctl.pricing.github import (
+        fetch_github_models_market,
+        fetch_github_copilot_market,
+    )
+    from harnessctl.pricing.google import fetch_google_market
 
     tasks = [
         fetch_openrouter_market(warnings, force_refresh),
         fetch_litellm_market(warnings, force_refresh),
+        fetch_github_models_market(warnings, force_refresh),
+        fetch_github_copilot_market(warnings, force_refresh),
+        fetch_google_market(warnings, force_refresh),
     ]
 
     results = await asyncio.gather(*tasks)
 
-    # Merge and deduplicate (OpenRouter takes priority for better metadata)
+    # Merge and deduplicate (Strategic merging)
     catalog: Dict[str, MarketModel] = {}
 
-    # Load LiteLLM first (base)
+    def merge_model(new_model: MarketModel):
+        existing = catalog.get(new_model.id)
+        if not existing:
+            # Try fuzzy matching for official models without provider prefix
+            # e.g. gemini-2.0-flash (from LiteLLM) matches google/gemini-2.0-flash
+            for prefix in [
+                "google/",
+                "github/",
+                "github-copilot/",
+                "openai/",
+                "anthropic/",
+            ]:
+                if new_model.id.startswith(prefix):
+                    base_id = new_model.id.split("/", 1)[1]
+                    if base_id in catalog:
+                        existing = catalog[base_id]
+                        break
+                else:
+                    prefixed_id = f"google/{new_model.id}"  # Try google as common case
+                    if prefixed_id in catalog:
+                        existing = catalog[prefixed_id]
+                        break
+
+            if not existing:
+                if new_model.input_per_mtok == 0 and new_model.output_per_mtok == 0:
+                    new_model.input_per_mtok, new_model.output_per_mtok = (
+                        get_pricing_heuristic(new_model.id)
+                    )
+                catalog[new_model.id] = new_model
+                return
+
+        # If existing has a price and new one doesn't, keep the price
+        if (
+            existing.input_per_mtok > 0 or existing.output_per_mtok > 0
+        ) and new_model.input_per_mtok == 0:
+            new_model.input_per_mtok = existing.input_per_mtok
+            new_model.output_per_mtok = existing.output_per_mtok
+
+        # Final pricing heuristic if still zero after merging
+        if new_model.input_per_mtok == 0 and new_model.output_per_mtok == 0:
+            new_model.input_per_mtok, new_model.output_per_mtok = get_pricing_heuristic(
+                new_model.id
+            )
+
+        # If existing has better intelligence source, keep it
+        if (
+            existing.intelligence_source in ["benchmark", "elo"]
+            and new_model.intelligence_source == "heuristic"
+        ):
+            new_model.intelligence = existing.intelligence
+            new_model.intelligence_source = existing.intelligence_source
+
+        # If existing has context window and new one doesn't
+        if existing.context_window > 0 and new_model.context_window == 0:
+            new_model.context_window = existing.context_window
+
+        catalog[new_model.id] = new_model
+
+    # Order of merging defines "officialness" (last source wins for metadata, but we preserve prices/benchmarks)
+    # 1. LiteLLM (Broadest pricing/context data)
     for model in results[1]:
-        catalog[model.id] = model
+        merge_model(model)
 
-    # Overwrite with OpenRouter (enriched)
+    # 2. Google (Official discovery)
+    for model in results[4]:
+        merge_model(model)
+
+    # 3. GitHub (Official discovery)
+    for res_idx in [2, 3]:
+        for model in results[res_idx]:
+            merge_model(model)
+
+    # 4. OpenRouter (Premium metadata & Benchmarks)
     for model in results[0]:
-        catalog[model.id] = model
-
-    # 3. Static/Provider-specific Overrides (e.g. GitHub/Copilot)
-    # If these are missing from upstream registries, we can inject key models here.
-    static_overrides = [
-        # GitHub Copilot Subscription Models
-        MarketModel(
-            id="github-copilot/gpt-5.4",
-            name="GPT-5.4 (Copilot)",
-            provider="github-copilot",
-            input_per_mtok=0.0,
-            output_per_mtok=0.0,
-            context_window=128000,
-            intelligence=98.0,
-            intelligence_source="heuristic",
-            speed_tps=80.0,
-            local=False,
-            status="available",
-        ),
-        MarketModel(
-            id="github-copilot/claude-sonnet-4.6",
-            name="Claude Sonnet 4.6 (Copilot)",
-            provider="github-copilot",
-            input_per_mtok=0.0,
-            output_per_mtok=0.0,
-            context_window=200000,
-            intelligence=97.0,
-            intelligence_source="heuristic",
-            speed_tps=70.0,
-            local=False,
-            status="available",
-        ),
-        MarketModel(
-            id="github-copilot/gemini-3.1-pro-preview",
-            name="Gemini 3.1 Pro (Copilot)",
-            provider="github-copilot",
-            input_per_mtok=0.0,
-            output_per_mtok=0.0,
-            context_window=1000000,
-            intelligence=96.0,
-            intelligence_source="heuristic",
-            speed_tps=100.0,
-            local=False,
-            status="available",
-        ),
-        # GitHub Marketplace Models
-        MarketModel(
-            id="github-models/openai/gpt-4o",
-            name="GPT-4o (GitHub)",
-            provider="github-models",
-            input_per_mtok=0.0,
-            output_per_mtok=0.0,
-            context_window=128000,
-            intelligence=95.0,
-            intelligence_source="heuristic",
-            speed_tps=80.0,
-            local=False,
-            status="available",
-        ),
-        MarketModel(
-            id="github-models/meta/llama-3.3-70b-instruct",
-            name="Llama 3.3 70B (GitHub)",
-            provider="github-models",
-            input_per_mtok=0.0,
-            output_per_mtok=0.0,
-            context_window=128000,
-            intelligence=85.0,
-            intelligence_source="heuristic",
-            speed_tps=60.0,
-            local=False,
-            status="available",
-        ),
-        MarketModel(
-            id="github-models/microsoft/phi-4",
-            name="Phi-4 (GitHub)",
-            provider="github-models",
-            input_per_mtok=0.0,
-            output_per_mtok=0.0,
-            context_window=16000,
-            intelligence=75.0,
-            intelligence_source="heuristic",
-            speed_tps=120.0,
-            local=False,
-            status="available",
-        ),
-    ]
-
-    for model in static_overrides:
-        if model.id not in catalog:
-            catalog[model.id] = model
+        merge_model(model)
 
     return list(catalog.values())

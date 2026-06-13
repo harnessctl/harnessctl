@@ -2,6 +2,7 @@ import platform
 import subprocess
 import re
 import psutil
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 
@@ -77,6 +78,30 @@ def _detect_metal_vram() -> Optional[float]:
     return None
 
 
+def _detect_linux_drm_vram() -> Optional[float]:
+    """Detect VRAM in GB for AMD/Intel via DRM sysfs (Linux only)."""
+    if platform.system() != "Linux":
+        return None
+
+    try:
+        vram_values = []
+        # Standard DRM path for memory info (covers AMD and Intel Arc)
+        for p in Path("/sys/class/drm/").glob("card*/device/mem_info_vram_total"):
+            try:
+                val = int(p.read_text().strip())
+                if val > 0:
+                    vram_values.append(val)
+            except (ValueError, OSError):
+                continue
+
+        if vram_values:
+            return max(vram_values) / (1024**3)
+    except Exception:
+        pass
+
+    return None
+
+
 def detect_system() -> SystemProfile:
     """Detect system hardware capabilities."""
     os_name = platform.system().lower()
@@ -90,18 +115,33 @@ def detect_system() -> SystemProfile:
     # CPU cores
     cpu_cores = psutil.cpu_count(logical=False) or psutil.cpu_count() or 1
 
-    # GPU detection
+    # GPU detection (Strategy: Specialized -> Generic -> Platform-specific)
     vram_gb = _detect_nvidia_vram()
     gpu_kind = "nvidia" if vram_gb is not None else None
 
+    # Try Generic Linux DRM (covers AMD and Intel Arc)
+    if vram_gb is None and os_name == "linux":
+        vram_gb = _detect_linux_drm_vram()
+        if vram_gb is not None:
+            gpu_kind = "gpu"
+            try:
+                # Heuristic vendor detection
+                for p in Path("/sys/class/drm/").glob("card*/device/vendor"):
+                    vendor = p.read_text().strip().lower()
+                    if "0x1002" in vendor or "amd" in vendor:
+                        gpu_kind = "amd"
+                        break
+                    if "0x8086" in vendor or "intel" in vendor:
+                        gpu_kind = "intel"
+                        break
+            except Exception:
+                pass
+
+    # Try Apple Metal
     if vram_gb is None and os_name == "darwin":
         vram_gb = _detect_metal_vram()
         if vram_gb is not None or "arm" in arch.lower():
-            # If it's Apple Silicon, we might not see "VRAM" but it has Metal
             gpu_kind = "metal"
-            # Note: For Apple Silicon, VRAM is often Unified Memory.
-            # If we couldn't find a specific VRAM value, we keep it as None
-            # and let the recommender use the RAM-only estimate logic.
 
     return SystemProfile(
         ram_gb=ram_gb,

@@ -10,6 +10,7 @@ async def fetch_prices_generic(
     warnings: WarningCollector,
     force_refresh: bool = False,
     ttl_hours: int = 24,
+    headers: Optional[Dict[str, str]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Generic price fetcher with caching and error handling."""
     if not force_refresh:
@@ -19,7 +20,7 @@ async def fetch_prices_generic(
 
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(url, timeout=10)
+            response = await client.get(url, timeout=10, headers=headers)
             response.raise_for_status()
             data = response.json()
             from harnessctl.pricing.cache import write_cache
@@ -27,7 +28,8 @@ async def fetch_prices_generic(
             write_cache(provider_name, data)
             return data
         except Exception as e:
-            warnings.add_warning(
-                f"Failed to fetch {provider_name} prices: {e}. Falling back to stale cache."
+            warnings.add(
+                field=provider_name,
+                reason=f"Failed to fetch prices: {e}. Falling back to stale cache.",
             )
             return read_stale_cache(provider_name)

@@ -13,6 +13,7 @@ class DiscoveredModel:
     id: str
     endpoint: str
     local: bool = True
+    metadata: dict = None
 
 
 class RuntimeProbe(ABC):
@@ -23,7 +24,7 @@ class RuntimeProbe(ABC):
 
 
 async def run_probes(
-    probes: List[RuntimeProbe], timeout: float = 2.0
+    probes: List[RuntimeProbe], timeout: float = 5.0
 ) -> List[DiscoveredModel]:
     """Run multiple probes concurrently, with a timeout for each."""
 
