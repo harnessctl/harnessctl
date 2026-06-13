@@ -42,6 +42,9 @@ def list_cmd(
     direction: str = typer.Option(
         "desc", "--direction", help="Sort direction: asc, desc."
     ),
+    provider: Optional[str] = typer.Option(
+        None, "--provider", help="Filter by provider (e.g. openai, anthropic, ollama)."
+    ),
     grep: Optional[str] = typer.Option(None, "--grep", help="Filter by name."),
     refresh: bool = typer.Option(False, "--refresh", help="Force refresh market data."),
     reindex: bool = typer.Option(
@@ -80,6 +83,8 @@ def list_cmd(
             catalog = [m for m in catalog if m.local]
         if commercial:
             catalog = [m for m in catalog if not m.local]
+        if provider:
+            catalog = [m for m in catalog if provider.lower() in m.provider.lower()]
         if grep:
             catalog = [
                 m
