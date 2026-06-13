@@ -1,0 +1,18 @@
+
+- [ ] **init** -> Scaffold a default agents.yaml configuration.
+  - [ ] *--path* -> Path to create the spec file. [default: agents.yaml] Okay. You know them.
+- [ ] **validate** -> Load and validate the spec file, printing any warnings.
+  - [ ] TODO: Must define a JSON/YAML schema for this process
+- [ ] **compile** -> Render and emit configurations to target harnesses.
+  - [ ] *--mode <global/local>* -> Defines the compilation mode: global config (always more complex), local config (can miss components)
+  - [ ] --dest PATH -> For example, for Pi we can define custom global configs placed in custom paths
+- [ ] **version** -> Show the version of harnessctl.
+- [ ] **models** -> Manage and discover models.
+  - [ ] **list** -> List existing models, presenting model name, version, intellicene, speed and price
+    - TODO: detect what LLM tools are installed and inform user whether their services are started or not before listing models (can be canceled by --commercial argument)
+    - [ ] *--local* -> filters only local models (Ollama, MLX, Llama.cpp, LMStudio)
+    - [ ] *--commercial* -> filters only commercial models
+    - [ ] *--sort-by <intelligence,speed> <asc|desc>* -> Sorts models by criterias, using external source: <https://pricepertoken.com/> <https://whatllm.org/explore> <https://artificialanalysis.ai/leaderboards/providers>
+    - [ ] *--grep* -> filters by name
+  - [ ] **recommend** -> Recommend a model for a specific task based on system hardware.
+    - TODO: must re-define feature

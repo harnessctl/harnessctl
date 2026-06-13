@@ -3,7 +3,7 @@ id: "00007"
 type: lld
 title: "CLI and Distribution"
 version: 1
-status: draft
+status: deprecated
 parent: "00001"
 opencode-agent: lead-engineer
 ---

@@ -3,7 +3,7 @@ id: "00004"
 type: lld
 title: "Local Discovery and Pricing"
 version: 1
-status: draft
+status: deprecated
 parent: "00001"
 opencode-agent: lead-engineer
 ---

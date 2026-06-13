@@ -3,7 +3,7 @@ id: "00005"
 type: lld
 title: "Model Recommender Puller and Multi-Engine Exposure"
 version: 1
-status: draft
+status: deprecated
 parent: "00001"
 opencode-agent: lead-engineer
 ---

@@ -3,7 +3,7 @@ id: "00002"
 type: lld
 title: "Template Compiler and Harness Emitters"
 version: 1
-status: draft
+status: deprecated
 parent: "00001"
 opencode-agent: lead-engineer
 ---
