@@ -10,7 +10,7 @@ from harnessctl.pricing.cache import (
 )
 from harnessctl.pricing.litellm import fetch_litellm_prices
 from harnessctl.pricing.openrouter import fetch_openrouter_prices
-from harnessctl.pricing.catalog import merge_catalog
+from harnessctl.pricing.catalog import merge_market_data, MarketModel
 from harnessctl.discovery.base import DiscoveredModel
 from harnessctl.spec.warnings import WarningCollector
 
@@ -98,48 +98,50 @@ async def test_openrouter_fetch(mock_get, mock_read_cache):
         assert res["openai/gpt-4"]["output_per_mtok"] == 60.0
 
 
-def test_catalog_merge():
+def test_market_merge():
     discovered = [
         DiscoveredModel(
             runtime="ollama", id="llama3:8b", endpoint="http://localhost", local=True
         )
     ]
-    litellm = {
-        "gpt-4": {
-            "input_per_mtok": 30.0,
-            "output_per_mtok": 60.0,
-            "context_window": 8000,
-            "provider": "litellm",
-        }
-    }
-    openrouter = {
-        "openai/gpt-4": {
-            "input_per_mtok": 10.0,
-            "output_per_mtok": 20.0,
-            "context_window": 8000,
-            "provider": "openrouter",
-        },
-        "gpt-4": {
-            "input_per_mtok": 20.0,
-            "output_per_mtok": 40.0,
-            "context_window": 8000,
-            "provider": "openrouter",
-        },
-    }
+    commercial = [
+        MarketModel(
+            id="openai/gpt-4",
+            name="GPT-4",
+            provider="openrouter",
+            input_per_mtok=10.0,
+            output_per_mtok=20.0,
+            context_window=8000,
+            intelligence=90.0,
+            speed_tps=20.0,
+            local=False,
+            status="available",
+        ),
+        MarketModel(
+            id="anthropic/claude-3",
+            name="Claude 3",
+            provider="openrouter",
+            input_per_mtok=15.0,
+            output_per_mtok=30.0,
+            context_window=200000,
+            intelligence=95.0,
+            speed_tps=30.0,
+            local=False,
+            status="available",
+        ),
+    ]
 
-    catalog = merge_catalog(discovered, litellm, openrouter)
+    catalog = merge_market_data(discovered, commercial)
 
-    # 3 models total (gpt-4 is in both, so it deduplicates)
+    # 3 models total
     assert len(catalog) == 3
 
-    # Check sorting
-    assert catalog[0].id == "llama3:8b"
-    assert catalog[0].input_per_mtok == 0.0
-    assert catalog[0].local is True
+    # Verify local model estimation
+    local_model = next(m for m in catalog if m.id == "llama3:8b")
+    assert local_model.local is True
+    assert local_model.intelligence == 50.0  # 8b heuristic
+    assert local_model.speed_tps == 80.0  # 8b heuristic
 
-    assert catalog[1].id == "openai/gpt-4"
-    assert catalog[1].input_per_mtok == 10.0
-
-    assert catalog[2].id == "gpt-4"
-    assert catalog[2].input_per_mtok == 20.0
-    assert catalog[2].provider == "openrouter"  # openrouter preferred over litellm
+    # Verify commercial models preserved
+    assert any(m.id == "openai/gpt-4" for m in catalog)
+    assert any(m.id == "anthropic/claude-3" for m in catalog)
