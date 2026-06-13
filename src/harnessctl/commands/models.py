@@ -65,6 +65,8 @@ def list_providers_cmd(
             "bedrock": "https://aws.amazon.com/bedrock",
             "perplexity": "https://perplexity.ai",
             "xai": "https://x.ai",
+            "github": "https://github.com/marketplace/models",
+            "copilot": "https://github.com/features/copilot",
         }
 
         table = Table(title="Model Providers", box=box.ROUNDED)
