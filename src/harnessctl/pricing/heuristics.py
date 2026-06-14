@@ -10,13 +10,18 @@ def get_intel_heuristic(model_id: str) -> float:
         k in name
         for k in [
             "o1",
+            "o3",
+            "gpt-5",
             "claude-3-5",
+            "claude-4",
+            "claude-5",
             "fable",
             "gpt-4o",
             "deepseek-v3",
             "deepseek-r1",
             "gemini-2.0",
-            "gemini-1.5-pro",
+            "gemini-2.5",
+            "gemini-3",
             "opus",
             "abacus",
         ]

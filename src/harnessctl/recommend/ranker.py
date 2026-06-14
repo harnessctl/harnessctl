@@ -140,8 +140,13 @@ def search_candidates(
             ):
                 continue
 
-            # Cloud Search matches are also filtered by intelligence unless grepped
-            if m.intelligence < 50 and not (
+            # Cloud Search matches are also filtered by intelligence unless
+            # we are explicitly searching/grepping or have a high limit
+            threshold = 50
+            if grep or provider_filter or limit > 50:
+                threshold = 0
+
+            if m.intelligence < threshold and not (
                 grep
                 and (grep.lower() in m.id.lower() or grep.lower() in m.name.lower())
             ):
