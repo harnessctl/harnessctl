@@ -32,6 +32,7 @@ def search_candidates(
     include_local: bool = True,
     include_commercial: bool = True,
     provider_filter: Optional[str] = None,
+    grep: Optional[str] = None,
     limit: int = 10,
 ) -> List[RankedModel]:
     """Search and rank models based on system fit, intent, and market availability."""
@@ -47,13 +48,14 @@ def search_candidates(
             if intent.is_coding:
                 tags.append("coding")
 
-            # Adjust search based on complexity
-            search_limit = limit * 2
+            # Adjust search based on complexity and grep
+            search_limit = max(limit * 4, 100)
             if intent.complexity > 60:
-                search_limit *= 2  # Look for more models for complex tasks
+                search_limit *= 2
 
             models = api.list_models(
                 filter=tags,
+                search=grep if grep else None,
                 sort="downloads",
                 limit=search_limit,
             )
@@ -131,10 +133,23 @@ def search_candidates(
             if provider_filter and provider_filter.lower() not in m.provider.lower():
                 continue
 
-            # Only include high-intelligence models for cloud recommendations
-            # to avoid cluttering with low-tier providers
-            if m.intelligence < 50:
+            if (
+                grep
+                and grep.lower() not in m.id.lower()
+                and grep.lower() not in m.name.lower()
+            ):
                 continue
+
+            # Cloud Search matches are also filtered by intelligence unless grepped
+            if m.intelligence < 50 and not (
+                grep
+                and (grep.lower() in m.id.lower() or grep.lower() in m.name.lower())
+            ):
+                continue
+
+            # In ranker, we must ensure we don't accidentally skip $0.00 price models
+            # when calculating price_factor (avoid division by zero if it happens,
+            # though we added +0.05)
 
             # Score based on intelligence and alignment with intent
             score = m.intelligence * 1.5
@@ -194,11 +209,20 @@ def search_candidates(
 
     seen_ids = set()
     final_results = []
+    # If we are searching or sorting by something else, we want a larger pool
+    # before we apply the final 'limit' from this function's perspective.
+    # Actually, the caller handles the final display limit.
+    # So we should return a healthy amount of candidates.
+
+    internal_limit = max(limit * 2, 100)
+    if grep:
+        internal_limit = max(internal_limit, 500)
+
     for c in candidates:
         if c.id not in seen_ids:
             seen_ids.add(c.id)
             final_results.append(c)
-            if len(final_results) >= limit:
+            if len(final_results) >= internal_limit:
                 break
 
     return final_results

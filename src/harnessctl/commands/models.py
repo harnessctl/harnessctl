@@ -383,6 +383,7 @@ def recommend_cmd(
     provider: Optional[str] = typer.Option(
         None, "--provider", help="Filter by provider."
     ),
+    grep: Optional[str] = typer.Option(None, "--grep", help="Filter by name."),
     sort_by: str = typer.Option(
         "score",
         "--sort-by",
@@ -430,7 +431,8 @@ def recommend_cmd(
                 include_local=local,
                 include_commercial=commercial,
                 provider_filter=provider,
-                limit=limit * 2 if sort_field != "score" else limit,
+                grep=grep,
+                limit=limit,
             )
 
         if not candidates:
