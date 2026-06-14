@@ -1,0 +1,86 @@
+version: "1.0"
+
+harnesses:
+  "*": # generic defintion that can be merged into ALL the other defined templates
+    templates: # template folders to look for data into, generic (or common) is automatically included in the list, being the first folder to look into
+      - generic-coding
+    agents: # list of agents to compile, not all agents can work on all harnesses - if not mentioned, compile all
+      - coder-smart
+    # if skill or tools are left empty, you will have to scan the entire set of generated agents, see what skills are used, then recursively scan the skill files to see what other skills are mentioned until you can provide a full list of skills/tools that need to be compiled
+    skills:
+      - lang-js
+      - lang-ts
+    # the generic list of MCP servers to be added to the config file
+    mcp-servers: []
+    # the generic list of models providers, other than the ones the harness has access to:
+    # i.e. OpenCode can connect to Github on its own, but
+    # it cannot see LMStudio unless configured
+    providers: []
+  opencode:
+    templates: # template folders to look for data into, generic (or common) is automatically included in the list, being the first folder to look into
+      - generic-coding
+      - game-coding
+    agents: # list of agents to compile, not all agents can work on all harnesses - if not mentioned, compile all
+      - coder-medium
+      - coder-cheap
+    # skills-include: list of skills to add to the inherited set
+    skills-include:
+      - lang-py
+      - caveman
+      - whatever
+    config-templates:
+      - templates/opencode.json.md
+    # additional MCP servers and also can change some specific settings of the mcp-servers mentioned in *
+    mcp-servers: []
+  pi:
+    # tools: list of functional extensions/MCP servers available to agents in this harness
+    tools:
+      - do-the-tonga-dance
+    config-templates:
+      - templates/pi.json.md
+    # additional model providers and also can change some specific settings of the providers mentioned in *
+    providers: []
+
+  # FUTURE_HARNESS_EXAMPLE: 
+  # This section demonstrates forward-compatibility. 
+  # A harness can define its own unique keys (e.g., 'hardware-constraints') 
+  # that are ignored by OpenCode/Pi but used by specialized executors.
+  mobile-edge:
+    templates:
+      - edge-optimized
+    agents:
+      - nano-coder
+    # Non-standard key for specialized harnesses
+    hardware-constraints:
+      max_tps: 10
+      power_profile: "low"
+    # Overriding a provider setting from the '*' global set
+    providers:
+      - name: "ollama-local"
+        endpoint: "http://192.168.1.50:11434"
+
+# --- Lead-Engineer Notes for Topology Orchestration ---
+# 1. Config Engines:
+#    - Use Jsonnet (.jsonnet) for data-heavy configurations to ensure valid 
+#      JSON structures and native inheritance (see config-sample.jsonnet).
+#    - Use Jinja2 (.j2 / .md) for text-heavy templates and instruction sets.
+#
+# 2. Skill Discovery: The orchestrator should scan templates for jinja2-style tags:
+#    {% load_skill skills="lang-js,lang-ts" %}
+#    This allows for static analysis of dependencies before agent execution.
+#    Example scan target in 'templates/opencode.json.md':
+#    "I am an agent. {% load_skill skills='lang-py,clean-code' %}"
+#
+# 2. Compatibility & Extension:
+#    - OpenCode and Pi are primary targets.
+#    - Unknown keys (like 'hardware-constraints') should be preserved during merging
+#      to ensure future harnesses can carry metadata through the pipeline without
+#      breaking the current parser.
+#
+# 3. Hardware Binding (Internal State):
+#    While this config defines 'What', harnessctl needs a sidecar or 'active'
+#    section to define 'Where' (e.g., mapping coder-smart to 'ollama/llama3-70b').
+#
+# 4. Recursive Resolution: If an agent is selected, the system must
+#    auto-inject skills required by that agent's definition if not listed here.
+#    Example: 'coder-smart' implies 'clean-code' and 'git-workflow' skills.

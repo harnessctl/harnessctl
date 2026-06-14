@@ -368,6 +368,15 @@ def recommend_cmd(
     provider: Optional[str] = typer.Option(
         None, "--provider", help="Filter by provider."
     ),
+    sort_by: str = typer.Option(
+        "score",
+        "--sort-by",
+        help="Sort by: score, intelligence, speed, price, context.",
+    ),
+    direction: str = typer.Option(
+        "desc", "--direction", help="Sort direction: asc, desc."
+    ),
+    limit: int = typer.Option(10, "--limit", help="Limit number of recommendations."),
 ):
     """Recommend a model for a specific task based on system hardware."""
     from harnessctl.sysprobe.profile import detect_system
@@ -400,7 +409,7 @@ def recommend_cmd(
                 include_local=local,
                 include_commercial=commercial,
                 provider_filter=provider,
-                limit=10,
+                limit=limit * 2 if sort_by != "score" else limit,
             )
 
         if not candidates:
@@ -408,6 +417,26 @@ def recommend_cmd(
                 "[yellow]No suitable models found matching your criteria.[/yellow]"
             )
             return
+
+        # 3. Sort if requested (default is score from ranker)
+        if sort_by != "score" or direction == "asc":
+            reverse = direction.lower() == "desc"
+
+            def sort_key(m):
+                if sort_by == "intelligence":
+                    return m.intelligence
+                if sort_by == "speed":
+                    return m.speed_tps
+                if sort_by == "price":
+                    return m.input_per_mtok
+                if sort_by == "context":
+                    return m.context_window
+                return m.score
+
+            candidates.sort(key=sort_key, reverse=reverse)
+
+        # 4. Apply display limit
+        candidates = candidates[:limit]
 
         render_catalog_table("Model Recommendations", candidates)
         console.print(
