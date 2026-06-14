@@ -34,9 +34,16 @@ def search_candidates(
     provider_filter: Optional[str] = None,
     grep: Optional[str] = None,
     limit: int = 10,
+    trusted_only: bool = False,
 ) -> List[RankedModel]:
     """Search and rank models based on system fit, intent, and market availability."""
     candidates = []
+
+    trusted_fn = None
+    if trusted_only:
+        from harnessctl.recommend.trusted import is_trusted_author
+
+        trusted_fn = is_trusted_author
 
     # 1. Local Search (HuggingFace)
     if include_local:
@@ -61,6 +68,8 @@ def search_candidates(
             )
 
             for model in models:
+                if trusted_fn and not trusted_fn(model.modelId):
+                    continue
                 try:
                     # Check for GGUF files
                     files = api.list_repo_files(model.modelId)
@@ -97,8 +106,14 @@ def search_candidates(
                             if intent.complexity > 70 and params_billion < 10:
                                 score *= 0.5
 
-                            if intent.is_coding and "code" in model.modelId.lower():
-                                score *= 1.3
+                            if intent.is_coding:
+                                if any(
+                                    k in model.modelId.lower()
+                                    for k in ["coder", "code", "instruct-qa"]
+                                ):
+                                    score *= 2.5
+                                else:
+                                    score *= 1.5
 
                             from harnessctl.pricing.catalog import (
                                 estimate_local_metrics,
@@ -187,8 +202,11 @@ def search_candidates(
                 elif m.speed_tps < 30:
                     score *= 0.5
 
-            if intent.is_coding and "coder" in m.id.lower():
-                score *= 1.2
+            if intent.is_coding:
+                if any(k in m.id.lower() for k in ["coder", "code", "instruct-qa"]):
+                    score *= 2.5
+                else:
+                    score *= 1.5
 
             candidates.append(
                 RankedModel(

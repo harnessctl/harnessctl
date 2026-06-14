@@ -1,3 +1,7 @@
+---
+status: draft
+---
+
 # LLD-00012: Multi-Agent Topology Orchestration & Discovery Engine
 
 ## Overview

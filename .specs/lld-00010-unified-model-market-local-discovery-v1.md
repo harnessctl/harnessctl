@@ -3,7 +3,7 @@ id: "00010"
 type: lld
 title: "Unified Model Market & Local Discovery"
 version: 1
-status: draft
+status: done
 opencode-agent: lead-engineer
 ---
 

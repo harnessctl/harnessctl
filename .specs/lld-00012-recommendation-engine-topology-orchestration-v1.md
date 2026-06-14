@@ -1,3 +1,7 @@
+---
+status: deprecated
+---
+
 # LLD-00012: Recommendation Engine & Topology Orchestration
 
 ## Overview

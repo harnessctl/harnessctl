@@ -214,6 +214,9 @@ def list_cmd(
     limit: int = typer.Option(
         50, "--limit", help="Limit number of models displayed (0 for all)."
     ),
+    trusted: bool = typer.Option(
+        False, "--trusted", help="Filter for official/trusted authors only."
+    ),
 ):
     """List existing models with intelligence, speed and price metrics."""
 
@@ -254,6 +257,11 @@ def list_cmd(
 
         # 2. Merge and Filter
         catalog = merge_market_data(local_discovered, market_models)
+
+        if trusted:
+            from harnessctl.recommend.trusted import is_trusted_author
+
+            catalog = [m for m in catalog if is_trusted_author(m.id)]
 
         if local:
             catalog = [m for m in catalog if m.local]
@@ -380,6 +388,9 @@ def recommend_cmd(
     commercial: bool = typer.Option(
         True, "--commercial/--no-commercial", help="Include commercial models."
     ),
+    trusted: bool = typer.Option(
+        False, "--trusted", help="Filter for official/trusted authors only."
+    ),
     provider: Optional[str] = typer.Option(
         None, "--provider", help="Filter by provider."
     ),
@@ -423,6 +434,12 @@ def recommend_cmd(
             with console.status("[bold green]Fetching market data..."):
                 market_data = await fetch_market_data(warnings)
 
+        if trusted:
+            from harnessctl.recommend.trusted import is_trusted_author
+
+            if market_data:
+                market_data = [m for m in market_data if is_trusted_author(m.id)]
+
         with console.status("[bold green]Ranking candidates..."):
             candidates = search_candidates(
                 profile,
@@ -433,6 +450,7 @@ def recommend_cmd(
                 provider_filter=provider,
                 grep=grep,
                 limit=limit,
+                trusted_only=trusted,
             )
 
         if not candidates:

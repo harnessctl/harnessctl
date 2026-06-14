@@ -1,9 +1,10 @@
 ---
 id: "00009"
+status: done
 type: lld
 title: "Global Market Explorer (Commercial Model Registry)"
 version: 1
-status: deprecated
+
 opencode-agent: lead-engineer
 ---
 
