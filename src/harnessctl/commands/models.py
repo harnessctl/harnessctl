@@ -170,7 +170,10 @@ def render_catalog_table(title: str, models: List, total_count: Optional[int] = 
     console.print(table)
 
 
-@models_app.command(name="list")
+@models_app.command(
+    name="list",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
 def list_cmd(
     ctx: typer.Context,
     local: bool = typer.Option(False, "--local", help="Filter only local models."),
@@ -180,10 +183,7 @@ def list_cmd(
     sort_by: str = typer.Option(
         "intelligence",
         "--sort-by",
-        help="Sort by: intelligence, speed, price, context.",
-    ),
-    direction: str = typer.Option(
-        "desc", "--direction", help="Sort direction: asc, desc."
+        help="Sort by: field [asc|desc].",
     ),
     provider: Optional[str] = typer.Option(
         None, "--provider", help="Filter by provider (e.g. openai, anthropic, ollama)."
@@ -216,6 +216,18 @@ def list_cmd(
     ),
 ):
     """List existing models with intelligence, speed and price metrics."""
+
+    # Normalize sort_field and sort_dir
+    sort_field = sort_by
+    # Default to asc as per user request, but intelligence is usually desc by default
+    sort_dir = "desc" if sort_field == "intelligence" else "asc"
+
+    if ctx.args:
+        if ctx.args[0].lower() in ["asc", "desc"]:
+            sort_dir = ctx.args[0].lower()
+            # We don't pop from ctx.args here because Typer might need it for other things
+            # or it might cause issues if not handled carefully,
+            # but since we have allow_extra_args=True, it's fine.
 
     async def _async_list():
         warnings = ctx.obj.warnings
@@ -270,16 +282,16 @@ def list_cmd(
         )
 
         # 3. Sort
-        reverse = direction.lower() == "desc"
+        reverse = sort_dir.lower() == "desc"
 
         def sort_key(m: MarketModel):
-            if sort_by == "intelligence":
+            if sort_field == "intelligence":
                 return m.intelligence
-            if sort_by == "speed":
+            if sort_field == "speed":
                 return m.speed_tps
-            if sort_by == "price":
+            if sort_field == "price":
                 return m.input_per_mtok
-            if sort_by == "context":
+            if sort_field == "context":
                 return m.context_window
             return m.intelligence
 
@@ -353,7 +365,10 @@ def discover_cmd():
     console.print(table)
 
 
-@models_app.command(name="recommend")
+@models_app.command(
+    name="recommend",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
 def recommend_cmd(
     ctx: typer.Context,
     task: str = typer.Argument(
@@ -371,10 +386,7 @@ def recommend_cmd(
     sort_by: str = typer.Option(
         "score",
         "--sort-by",
-        help="Sort by: score, intelligence, speed, price, context.",
-    ),
-    direction: str = typer.Option(
-        "desc", "--direction", help="Sort direction: asc, desc."
+        help="Sort by: field [asc|desc].",
     ),
     limit: int = typer.Option(10, "--limit", help="Limit number of recommendations."),
 ):
@@ -382,6 +394,15 @@ def recommend_cmd(
     from harnessctl.sysprobe.profile import detect_system
     from harnessctl.recommend.ranker import search_candidates
     from harnessctl.recommend.intent import analyze_intent
+
+    # Normalize sort_field and sort_dir
+    sort_field = sort_by
+    # Default to asc as per user request, but score/intelligence are usually desc by default
+    sort_dir = "desc" if sort_field in ["score", "intelligence"] else "asc"
+
+    if ctx.args:
+        if ctx.args[0].lower() in ["asc", "desc"]:
+            sort_dir = ctx.args[0].lower()
 
     profile = detect_system()
     intent = analyze_intent(task)
@@ -409,7 +430,7 @@ def recommend_cmd(
                 include_local=local,
                 include_commercial=commercial,
                 provider_filter=provider,
-                limit=limit * 2 if sort_by != "score" else limit,
+                limit=limit * 2 if sort_field != "score" else limit,
             )
 
         if not candidates:
@@ -419,17 +440,17 @@ def recommend_cmd(
             return
 
         # 3. Sort if requested (default is score from ranker)
-        if sort_by != "score" or direction == "asc":
-            reverse = direction.lower() == "desc"
+        if sort_field != "score" or sort_dir == "asc":
+            reverse = sort_dir.lower() == "desc"
 
             def sort_key(m):
-                if sort_by == "intelligence":
+                if sort_field == "intelligence":
                     return m.intelligence
-                if sort_by == "speed":
+                if sort_field == "speed":
                     return m.speed_tps
-                if sort_by == "price":
+                if sort_field == "price":
                     return m.input_per_mtok
-                if sort_by == "context":
+                if sort_field == "context":
                     return m.context_window
                 return m.score
 
