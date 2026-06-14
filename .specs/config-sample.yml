@@ -1,5 +1,12 @@
 version: "1.0"
 
+agents:
+  default:
+    orchestrator: github-copilot/gemini-2.5-pro
+    reasoning: github-copilot/claude-opus-4.7
+    balanced: github-copilot/claude-sonnet-4.5
+    cheap:
+
 harnesses:
   "*": # generic defintion that can be merged into ALL the other defined templates
     templates: # template folders to look for data into, generic (or common) is automatically included in the list, being the first folder to look into
@@ -41,9 +48,9 @@ harnesses:
     # additional model providers and also can change some specific settings of the providers mentioned in *
     providers: []
 
-  # FUTURE_HARNESS_EXAMPLE: 
-  # This section demonstrates forward-compatibility. 
-  # A harness can define its own unique keys (e.g., 'hardware-constraints') 
+  # FUTURE_HARNESS_EXAMPLE:
+  # This section demonstrates forward-compatibility.
+  # A harness can define its own unique keys (e.g., 'hardware-constraints')
   # that are ignored by OpenCode/Pi but used by specialized executors.
   mobile-edge:
     templates:
@@ -61,7 +68,7 @@ harnesses:
 
 # --- Lead-Engineer Notes for Topology Orchestration ---
 # 1. Config Engines:
-#    - Use Jsonnet (.jsonnet) for data-heavy configurations to ensure valid 
+#    - Use Jsonnet (.jsonnet) for data-heavy configurations to ensure valid
 #      JSON structures and native inheritance (see config-sample.jsonnet).
 #    - Use Jinja2 (.j2 / .md) for text-heavy templates and instruction sets.
 #
