@@ -1,5 +1,5 @@
 ---
-status: draft
+status: done
 ---
 
 # LLD-00014: Harness Intelligence Registry (The Brain)

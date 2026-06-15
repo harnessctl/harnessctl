@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-06-14T21:52:01Z",
+  "categories": {
+    "coding": {
+      "weight": 1.0,
+      "concepts": {
+        "languages": ["python", "rust", "go", "typescript", "c++"],
+        "patterns": ["saga", "singleton", "factory"],
+        "principles": ["solid", "dry", "kiss"]
+      }
+    },
+    "reasoning": {
+      "weight": 0.8,
+      "concepts": {
+        "logic": ["propositional", "predicate"],
+        "algorithms": ["dijkstra", "a*"]
+      }
+    }
+  }
+}

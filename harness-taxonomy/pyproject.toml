@@ -1,0 +1,10 @@
+[project]
+name = "harness-taxonomy"
+version = "1.0.0"
+description = "Harness Intelligence Registry (The Brain)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["msgpack>=1.0.8", "zstandard>=0.22.0"]
+
+[dependency-groups]
+dev = ["pytest>=8.0.0"]

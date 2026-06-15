@@ -1,0 +1,53 @@
+name: Release Taxonomy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'taxonomy.json'
+  workflow_dispatch: {}
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Build msgpack.zst
+        run: uv run build.py
+
+      - name: Generate tag
+        id: tag
+        run: |
+          VERSION=$(grep -oP '"version": "\K[^"]+' taxonomy.json)
+          DATE=$(date -u +"%Y%m%d%H%M%S")
+          echo "TAG_NAME=v${VERSION}-${DATE}" >> $GITHUB_OUTPUT
+
+      - name: Release Latest
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Taxonomy
+          files: taxonomy.msgpack.zst
+          make_latest: true
+          
+      - name: Release Versioned
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          name: Release ${{ steps.tag.outputs.TAG_NAME }}
+          files: taxonomy.msgpack.zst

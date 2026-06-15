@@ -11,12 +11,14 @@ dependencies = [
   "jinja2>=3.1.6",
   "json5>=0.14.0",
   "jsonnet>=0.22.0",
+  "msgpack>=1.2.0",
   "nvidia-ml-py>=13.610.43",
   "psutil>=7.2.2",
   "pydantic>=2.13.4",
   "pyyaml>=6.0.3",
   "rich>=15.0.0",
   "typer>=0.25.1",
+  "zstandard>=0.25.0",
 ]
 
 [project.scripts]
@@ -33,4 +35,4 @@ requires = ["uv_build>=0.11.17,<0.12.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = ["pytest>=9.0.3", "pytest-asyncio>=1.4.0", "ruff>=0.15.17"]
+dev = ["pytest>=9.0.3", "pytest-asyncio>=1.4.0", "respx>=0.23.1", "ruff>=0.15.17"]

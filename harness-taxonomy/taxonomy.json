@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-06-15T00:00:00Z",
+  "categories": {
+    "coding": {
+      "weight": 1.0,
+      "concepts": {
+        "solid": ["liskov", "dependency inversion", "single responsibility", "open-closed", "interface segregation"],
+        "patterns": ["saga", "circuit breaker", "singleton", "factory", "repository", "cqrs", "event sourcing"],
+        "languages": ["python", "rust", "mojo", "zig", "go", "typescript", "c++", "c#", "java"]
+      }
+    },
+    "reasoning": {
+      "weight": 0.8,
+      "concepts": {
+        "logic": ["first-order", "propositional", "predicate", "boolean"],
+        "algorithms": ["dijkstra", "a*", "minimax", "dynamic programming", "backtracking", "greedy"]
+      }
+    },
+    "infrastructure": {
+      "weight": 0.9,
+      "concepts": {
+        "orchestration": ["kubernetes", "docker swarm", "nomad", "mesos"],
+        "iac": ["terraform", "opentofu", "pulumi", "cloudformation", "ansible"],
+        "ci_cd": ["github actions", "gitlab ci", "jenkins", "argocd", "flux"]
+      }
+    }
+  }
+}
