@@ -25,6 +25,8 @@ def get_intel_heuristic(model_id: str) -> float:
             "opus",
             "abacus",
         ]
+    ) and not any(
+        k in name for k in ["mini", "lite", "flash", "nano", "8b", "nemotron"]
     ):
         return 95.0
 
@@ -35,12 +37,23 @@ def get_intel_heuristic(model_id: str) -> float:
     # Tier 3: Mid-tier
     if any(
         k in name for k in ["llama-3.1-70b", "qwen2.5-72b", "deepseek-v2.5", "phi-4"]
-    ):
+    ) and not any(k in name for k in ["mini"]):
         return 80.0
 
     # Tier 4: Small models
     if any(
-        k in name for k in ["haiku", "flash", "mini", "8b", "llama-3.1-8b", "phi-3"]
+        k in name
+        for k in [
+            "haiku",
+            "flash",
+            "lite",
+            "mini",
+            "8b",
+            "llama-3.1-8b",
+            "phi-3",
+            "nano",
+            "nemotron",
+        ]
     ):
         return 55.0
 

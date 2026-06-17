@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Set
+from harnessctl.discovery.taxonomy import TaxonomyClient
 
 
 @dataclass
@@ -13,7 +14,7 @@ class TaskIntent:
     prefers_reasoning: bool = False
 
 
-# Simple keyword mapping for intent detection
+# Simple keyword mapping for intent detection (fallback/baseline)
 DOMAIN_KEYWORDS = {
     "coding": [
         "python",
@@ -30,33 +31,12 @@ DOMAIN_KEYWORDS = {
         "c#",
         "csharp",
         "java",
-        "kotlin",
-        "swift",
-        "php",
-        "ruby",
-        "rails",
-        "sql",
-        "html",
-        "css",
-        "tailwind",
-        "react",
-        "vue",
-        "svelte",
-        "docker",
-        "kubernetes",
-        "k8s",
-        "yaml",
-        "json",
-        "script",
         "code",
         "coding",
         "programming",
         "develop",
-        "microservice",
-        "api",
         "backend",
         "frontend",
-        "fullstack",
     ],
     "reasoning": [
         "logic",
@@ -66,9 +46,6 @@ DOMAIN_KEYWORDS = {
         "complex",
         "solve",
         "architecture",
-        "r1",
-        "o1",
-        "thought",
     ],
     "creative": ["story", "write", "poem", "creative", "style", "novel"],
 }
@@ -77,26 +54,34 @@ COMPLEXITY_TRIGGERS = {
     "microservice": 25,
     "architecture": 30,
     "auth": 20,
-    "cognito": 25,
     "distributed": 30,
     "optimize": 15,
     "refactor": 15,
-    "create": 5,
-    "write": 5,
 }
 
 
-def analyze_intent(task: str) -> TaskIntent:
+def analyze_intent(task: str, taxonomy_version: str = "latest") -> TaskIntent:
     task_lower = task.lower()
     words = set(task_lower.split())
 
     complexity = 10
     domains = set()
 
-    # Calculate Complexity
+    # Calculate base complexity from basic triggers
     for trigger, weight in COMPLEXITY_TRIGGERS.items():
         if trigger in task_lower:
             complexity += weight
+
+    # Try to enhance complexity via Taxonomy Registry (The Brain)
+    try:
+        tax_client = TaxonomyClient(version=taxonomy_version)
+        tax_score = tax_client.get_intent_complexity(task)
+        # If taxonomy found relevant matches, boost complexity
+        if tax_score > 0:
+            complexity += int(tax_score)
+    except Exception:
+        # Silently fallback to offline mode if network fails or version not found
+        pass
 
     complexity = min(100, complexity)
 
