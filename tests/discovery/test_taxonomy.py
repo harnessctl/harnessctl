@@ -15,7 +15,7 @@ def test_taxonomy_client(respx_mock):
     compressed = cctx.compress(packed)
 
     respx_mock.get(
-        "https://github.com/dragoscirjan/harness-taxonomy/releases/latest/download/taxonomy.msgpack.zst"
+        "https://github.com/harnessctl/harness-taxonomy/releases/latest/download/taxonomy.msgpack.zst"
     ).mock(return_value=Response(200, content=compressed))
 
     client = TaxonomyClient()
