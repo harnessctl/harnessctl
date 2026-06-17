@@ -3,7 +3,7 @@ import msgpack
 import zstandard as zstd
 from typing import Dict, Any, Optional
 
-DEFAULT_TAXONOMY_URL = "https://github.com/dragoscirjan/harness-taxonomy/releases/latest/download/taxonomy.msgpack.zst"
+DEFAULT_TAXONOMY_URL = "https://github.com/harnessctl/harness-taxonomy/releases/latest/download/taxonomy.msgpack.zst"
 
 
 class TaxonomyClient:
