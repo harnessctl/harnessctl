@@ -58,14 +58,17 @@ def _coerce_float(value: Any) -> float | None:
         return None
     candidate: float | None = None
     if isinstance(value, (int, float)):
-        candidate = float(value)
+        try:
+            candidate = float(value)
+        except OverflowError:
+            return None
     elif isinstance(value, str):
         stripped = value.strip()
         if not stripped:
             return None
         try:
             candidate = float(stripped)
-        except ValueError:
+        except (OverflowError, ValueError):
             return None
     if candidate is None or not math.isfinite(candidate):
         return None
