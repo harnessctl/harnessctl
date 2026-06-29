@@ -84,6 +84,20 @@ def test_failure_policy_can_force_reasoning_only_chain() -> None:
     assert result["fallback_agents"] == ["agent-d"]
 
 
+def test_explicit_failure_kind_is_normalized_for_policy_lookup() -> None:
+    result = build_fallback_chain(
+        request={"prompt": "security review"},
+        derived_metadata={"derived": {"task_class": "security"}},
+        routing_config=_routing_config(),
+        candidates=_candidates(),
+        selected_agent_id="agent-c",
+        failure_kind=" Security_Risk ",
+    )
+
+    assert result["escalation_action"] == "escalate_to_reasoning"
+    assert result["failure_kind"] == "security_risk"
+
+
 def test_fallback_chain_is_deterministic_for_same_inputs() -> None:
     kwargs = {
         "request": {"prompt": "frontend build"},

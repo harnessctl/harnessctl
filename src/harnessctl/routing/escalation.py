@@ -80,7 +80,9 @@ def _resolve_failure_action(
     escalation: dict[str, Any],
     explicit_failure_kind: str | None,
 ) -> tuple[str, str | None]:
-    failure_kind = explicit_failure_kind
+    failure_kind = None
+    if isinstance(explicit_failure_kind, str) and explicit_failure_kind.strip():
+        failure_kind = explicit_failure_kind.strip().lower()
     if failure_kind is None:
         context = _as_dict(request.get("context"))
         hint_map = _as_dict(request.get("hints"))
