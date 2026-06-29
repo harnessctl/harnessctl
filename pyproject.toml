@@ -30,6 +30,7 @@ packages = ["src/harnessctl"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "src/harnessctl/spec/defaults/templates" = "harnessctl/spec/defaults/templates"
+"schemas/config" = "harnessctl/schemas/config"
 
 [build-system]
 requires = ["uv_build>=0.11.17,<0.12.0"]

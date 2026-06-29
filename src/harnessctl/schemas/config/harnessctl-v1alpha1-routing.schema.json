@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessctl.dev/schemas/config/harnessctl-v1alpha1-routing.schema.json",
+  "title": "Harnessctl Routing Config v1alpha1",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "harnessctl/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "RoutingConfig"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "spec": {
+      "type": "object",
+      "required": ["taxonomy", "agent_registry", "routing", "escalation"],
+      "properties": {
+        "taxonomy": {
+          "type": "object"
+        },
+        "agent_registry": {
+          "type": "object"
+        },
+        "routing": {
+          "type": "object"
+        },
+        "escalation": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
