@@ -65,12 +65,14 @@ def test_cli_stub_exit_code_and_message():
     assert "Not implemented yet: mcp select_model_for_task" in result.stdout
 
 
-def test_cli_config_init_stub_exit_code_and_message():
+def test_cli_config_init_command_executes(tmp_path):
     result = runner.invoke(
-        app, ["config", "init", "--provider", "github-copilot", "--global"]
+        app,
+        ["config", "init", "--provider", "github-copilot", "--global"],
+        env={"HARNESSCTL_HOME": str(tmp_path / "home")},
     )
-    assert result.exit_code == 2
-    assert "Not implemented yet: config init" in result.stdout
+    assert result.exit_code == 0
+    assert "Initialized routing config" in result.stdout
 
 
 def test_cli_prompts_install_stub_exit_code_and_message():
