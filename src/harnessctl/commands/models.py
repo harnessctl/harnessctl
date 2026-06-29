@@ -400,6 +400,9 @@ def recommend_cmd(
         "--sort-by",
         help="Sort by: field [asc|desc].",
     ),
+    taxonomy_version: str = typer.Option(
+        "latest", "--taxonomy-version", help="Taxonomy version to use."
+    ),
     limit: int = typer.Option(10, "--limit", help="Limit number of recommendations."),
 ):
     """Recommend a model for a specific task based on system hardware."""
@@ -417,7 +420,7 @@ def recommend_cmd(
             sort_dir = ctx.args[0].lower()
 
     profile = detect_system()
-    intent = analyze_intent(task)
+    intent = analyze_intent(task, taxonomy_version=taxonomy_version)
 
     console.print(f"Task: [bold]{task}[/bold]")
     console.print(
