@@ -65,6 +65,7 @@ _COMPLEXITY_WEIGHTS: dict[str, int] = {
 
 
 def _coerce_str(value: Any) -> str | None:
+    """Return a trimmed string value, or ``None`` when blank/non-string."""
     if not isinstance(value, str):
         return None
     stripped = value.strip()
@@ -72,6 +73,7 @@ def _coerce_str(value: Any) -> str | None:
 
 
 def _taxonomy_aliases(config: dict[str, Any] | None) -> dict[str, str]:
+    """Extract normalized taxonomy aliases from routing config."""
     if not isinstance(config, dict):
         return {}
     spec = config.get("spec")
@@ -97,6 +99,7 @@ def _taxonomy_aliases(config: dict[str, Any] | None) -> dict[str, str]:
 def _normalize_task_class(
     value: str | None, aliases: dict[str, str]
 ) -> tuple[str, str | None]:
+    """Normalize task class and resolve alias mappings when present."""
     if value is None:
         return _DEFAULT_TASK_CLASS, None
 
@@ -107,6 +110,7 @@ def _normalize_task_class(
 
 
 def _infer_task_class_from_prompt(prompt: str) -> str:
+    """Infer task class from prompt keywords using boundary-aware matching."""
     lowered = prompt.lower()
     for task_class, keywords in _CLASS_KEYWORDS.items():
         if any(_keyword_match(lowered, keyword) for keyword in keywords):
@@ -115,6 +119,7 @@ def _infer_task_class_from_prompt(prompt: str) -> str:
 
 
 def _keyword_match(text: str, keyword: str) -> bool:
+    """Return True when keyword appears as a standalone token sequence."""
     normalized_keyword = keyword.strip().lower()
     if not normalized_keyword:
         return False
@@ -126,6 +131,7 @@ def _keyword_match(text: str, keyword: str) -> bool:
 
 
 def _infer_risk(task_class: str, prompt: str) -> str:
+    """Infer risk level from task class, escalating on security signal words."""
     lowered = prompt.lower()
     if any(keyword in lowered for keyword in _CLASS_KEYWORDS.get("security", ())):
         return "high"
@@ -133,6 +139,7 @@ def _infer_risk(task_class: str, prompt: str) -> str:
 
 
 def _infer_complexity(prompt: str) -> int:
+    """Infer complexity score (0-100) from weighted keywords and prompt size."""
     lowered = prompt.lower()
     score = 15
     for keyword, weight in _COMPLEXITY_WEIGHTS.items():
@@ -149,6 +156,7 @@ def _infer_complexity(prompt: str) -> int:
 
 
 def _coerce_complexity(value: Any) -> int | None:
+    """Coerce complexity hint to bounded integer, or return ``None`` if invalid."""
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
@@ -171,6 +179,7 @@ def _coerce_complexity(value: Any) -> int | None:
 
 
 def _unique_preserve_order(values: list[str]) -> list[str]:
+    """Deduplicate values while preserving first-seen order."""
     seen: set[str] = set()
     result: list[str] = []
     for value in values:
