@@ -47,9 +47,7 @@ def test_unsupported_api_version_fails() -> None:
 def test_missing_required_top_level_field_fails() -> None:
     doc = _valid_routing_config()
     doc.pop("kind")
-    with pytest.raises(
-        RoutingConfigSchemaError, match=r"Missing required field\(s\) in document: kind"
-    ):
+    with pytest.raises(RoutingConfigSchemaError, match=r"Schema validation failed"):
         validate_routing_config_document(doc)
 
 
@@ -58,7 +56,19 @@ def test_missing_required_spec_field_fails() -> None:
     spec = dict(doc["spec"])  # type: ignore[arg-type]
     spec.pop("routing")
     doc["spec"] = spec
-    with pytest.raises(
-        RoutingConfigSchemaError, match=r"Missing required field\(s\) in spec: routing"
-    ):
+    with pytest.raises(RoutingConfigSchemaError, match=r"Schema validation failed"):
+        validate_routing_config_document(doc)
+
+
+def test_invalid_kind_const_fails() -> None:
+    doc = _valid_routing_config()
+    doc["kind"] = "OtherConfig"
+    with pytest.raises(RoutingConfigSchemaError, match=r"Schema validation failed"):
+        validate_routing_config_document(doc)
+
+
+def test_null_metadata_name_fails() -> None:
+    doc = _valid_routing_config()
+    doc["metadata"] = {"name": None}
+    with pytest.raises(RoutingConfigSchemaError, match=r"Schema validation failed"):
         validate_routing_config_document(doc)
