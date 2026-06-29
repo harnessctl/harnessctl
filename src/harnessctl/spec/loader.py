@@ -8,6 +8,9 @@ import yaml
 from harnessctl.paths import get_global_config_base_dir, get_project_config_base_dir
 from harnessctl.spec.models import Spec
 
+_KEYED_LIST_MERGE_FIELDS = {"agents", "rules", "chains"}
+_KEY_CANDIDATES = ("id", "name")
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     """Load a YAML file into a dict; return empty dict if file missing or empty."""
@@ -21,14 +24,68 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     """Recursively merge *override* into *base*.
 
-    Dicts are merged deeply; scalars and lists are replaced outright.
+    Dicts are merged deeply; scalars are replaced outright.
+    Lists are replaced, except keyed list fields (``agents``, ``rules``,
+    ``chains``) which merge by ``id``/``name`` when possible.
     """
     merged = dict(base)
     for key, value in override.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = _deep_merge(merged[key], value)
+        elif (
+            key in _KEYED_LIST_MERGE_FIELDS
+            and isinstance(value, list)
+            and isinstance(merged.get(key), list)
+        ):
+            merged[key] = _merge_keyed_list(merged[key], value)
         else:
             merged[key] = value
+    return merged
+
+
+def _entry_identity(entry: Any) -> str | None:
+    if not isinstance(entry, dict):
+        return None
+    for candidate in _KEY_CANDIDATES:
+        identifier = entry.get(candidate)
+        if isinstance(identifier, str) and identifier:
+            return f"{candidate}:{identifier}"
+    return None
+
+
+def _merge_keyed_list(base: list[Any], override: list[Any]) -> list[Any]:
+    """Merge lists by entry identity (``id`` or ``name``) when possible.
+
+    If either list contains entries without identity, fallback is full replacement
+    with the higher-precedence list (*override*).
+    """
+    base_ids = [_entry_identity(item) for item in base]
+    override_ids = [_entry_identity(item) for item in override]
+    if any(identifier is None for identifier in base_ids + override_ids):
+        return list(override)
+
+    duplicate_base_ids = {
+        identifier for identifier in base_ids if base_ids.count(identifier) > 1
+    }
+    if duplicate_base_ids:
+        duplicates = ", ".join(
+            sorted(str(identifier) for identifier in duplicate_base_ids)
+        )
+        raise ValueError(f"Duplicate keyed-list identities in base list: {duplicates}")
+
+    merged = [dict(item) if isinstance(item, dict) else item for item in base]
+    index_by_id = {identifier: index for index, identifier in enumerate(base_ids)}
+
+    for item, identifier in zip(override, override_ids):
+        if identifier in index_by_id:
+            base_index = index_by_id[identifier]
+            existing = merged[base_index]
+            if isinstance(existing, dict) and isinstance(item, dict):
+                merged[base_index] = _deep_merge(existing, item)
+            else:
+                merged[base_index] = item
+        else:
+            merged.append(item)
     return merged
 
 
