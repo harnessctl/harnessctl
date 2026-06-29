@@ -1,11 +1,11 @@
 """Load and deep-merge harnessctl spec from multiple YAML sources."""
 
-import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from harnessctl.paths import get_global_config_base_dir, get_project_config_base_dir
 from harnessctl.spec.models import Spec
 
 
@@ -40,16 +40,14 @@ def _default_defaults_path() -> Path | None:
 
 def _default_user_config_path() -> Path | None:
     """Path to user-level config YAML."""
-    home = Path(
-        os.environ.get("HARNESSCTL_HOME", Path.home() / ".config" / "harnessctl")
-    )
+    home = get_global_config_base_dir()
     candidate = home / "config.yaml"
     return candidate if candidate.exists() else None
 
 
 def _default_project_local_path() -> Path | None:
     """Path to project-local config YAML."""
-    candidate = Path.cwd() / ".harnessctl" / "config.yaml"
+    candidate = get_project_config_base_dir() / "config.yaml"
     return candidate if candidate.exists() else None
 
 
