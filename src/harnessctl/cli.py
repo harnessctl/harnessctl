@@ -3,8 +3,18 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+import yaml
 from rich.console import Console
 
+from harnessctl.config.schema_validator import (
+    RoutingConfigSchemaError,
+    validate_routing_config_document,
+)
+from harnessctl.paths import (
+    ensure_directory,
+    get_global_config_base_dir,
+    get_project_config_base_dir,
+)
 from harnessctl.spec.loader import load_spec
 from harnessctl.spec.models import Spec
 from harnessctl.spec.warnings import WarningCollector
@@ -67,6 +77,88 @@ def _not_implemented(command_name: str) -> None:
     raise typer.Exit(code=2)
 
 
+def _provider_agents(provider: str) -> list[dict[str, object]]:
+    if provider == "github-copilot":
+        return [
+            {
+                "id": "copilot-default",
+                "model": "github-copilot/gpt-5-mini",
+                "provider": "github-copilot",
+                "tier": "strong",
+                "capabilities": ["implementation", "review", "reasoning"],
+            }
+        ]
+
+    if provider == "openrouter":
+        return [
+            {
+                "id": "openrouter-default",
+                "model": "openrouter/anthropic/claude-3.5-sonnet",
+                "provider": "openrouter",
+                "tier": "strong",
+                "capabilities": ["implementation", "review"],
+            }
+        ]
+
+    raise ValueError(
+        f"Unsupported provider: {provider!r}. Supported: github-copilot, openrouter"
+    )
+
+
+def _build_routing_config(provider: str) -> dict[str, object]:
+    return {
+        "apiVersion": "harnessctl/v1alpha1",
+        "kind": "RoutingConfig",
+        "metadata": {"name": "default"},
+        "spec": {
+            "taxonomy": {
+                "task_classes": ["implementation", "review", "docs"],
+                "aliases": {},
+            },
+            "agent_registry": {
+                "agents": _provider_agents(provider),
+            },
+            "routing": {
+                "rules": [
+                    {
+                        "name": "default-rule",
+                        "when": {"task_type_in": ["implementation", "review", "docs"]},
+                        "choose": {
+                            "preferred_tiers": ["cheap", "medium", "strong"],
+                            "optimize_for": "cost",
+                        },
+                    }
+                ]
+            },
+            "escalation": {
+                "strategy": {
+                    "keying": "task_class",
+                    "fallback_on_unknown_task_class": "default",
+                },
+                "chains": [
+                    {
+                        "name": "default",
+                        "tiers": ["cheap", "medium", "strong"],
+                    }
+                ],
+            },
+            "provider_presets": [provider],
+        },
+    }
+
+
+def _build_provider_reference(provider: str) -> dict[str, object]:
+    return {
+        "apiVersion": "harnessctl/v1alpha1",
+        "kind": "ProviderPresetReference",
+        "metadata": {"name": provider},
+        "spec": {
+            "provider": provider,
+            "source": "builtin",
+        },
+    }
+
+
 @app.callback()
 def main(
     ctx: typer.Context,
@@ -101,7 +193,7 @@ app.add_typer(mcp_app, name="mcp")
 
 
 @config_app.command(name="init")
-def config_init_stub(
+def config_init_command(
     provider: str = typer.Option(
         ..., "--provider", help="Provider preset to bootstrap."
     ),
@@ -115,10 +207,66 @@ def config_init_stub(
         "--project",
         help="Initialize config under <path>/.harnessctl.",
     ),
+    overwrite: bool = typer.Option(
+        False,
+        "--overwrite",
+        help="Overwrite existing generated config files.",
+    ),
 ) -> None:
-    """Bootstrap routing configuration (stub)."""
-    _ = (provider, global_scope, project)
-    _not_implemented("config init")
+    """Bootstrap routing configuration for a selected provider."""
+    if global_scope == (project is not None):
+        typer.secho(
+            "You must specify exactly one target: --global or --project <path>",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        routing_doc = _build_routing_config(provider)
+    except ValueError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=2) from exc
+
+    try:
+        validate_routing_config_document(routing_doc)
+    except RoutingConfigSchemaError as exc:
+        typer.secho(f"Generated config failed validation: {exc}", fg=typer.colors.RED)
+        raise typer.Exit(code=2) from exc
+
+    if global_scope:
+        base_dir = get_global_config_base_dir()
+    else:
+        base_dir = get_project_config_base_dir(project)
+
+    providers_dir = base_dir / "providers"
+    routing_path = base_dir / "routing.yaml"
+    provider_path = providers_dir / f"{provider}.yaml"
+
+    existing = [str(path) for path in (routing_path, provider_path) if path.exists()]
+    if existing and not overwrite:
+        typer.secho(
+            "Refusing to overwrite existing files (use --overwrite):\n"
+            + "\n".join(f"- {path}" for path in existing),
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+
+    ensure_directory(base_dir)
+    ensure_directory(providers_dir)
+
+    routing_path.write_text(
+        yaml.safe_dump(routing_doc, sort_keys=False), encoding="utf-8"
+    )
+    provider_ref = _build_provider_reference(provider)
+    provider_path.write_text(
+        yaml.safe_dump(provider_ref, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    typer.secho(
+        f"Initialized routing config:\n- {routing_path}\n- {provider_path}",
+        fg=typer.colors.GREEN,
+    )
 
 
 @prompts_app.command(name="install")
