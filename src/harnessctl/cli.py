@@ -11,7 +11,6 @@ from harnessctl.config.schema_validator import (
     validate_routing_config_document,
 )
 from harnessctl.config.preset_loader import (
-    build_provider_reference_from_preset,
     build_routing_config_from_preset,
 )
 from harnessctl.paths import (
@@ -160,11 +159,9 @@ def config_init_command(
     else:
         base_dir = get_project_config_base_dir(project)
 
-    providers_dir = base_dir / "providers"
-    routing_path = base_dir / "routing.yaml"
-    provider_path = providers_dir / f"{provider}.yaml"
+    config_path = base_dir / "config.yaml"
 
-    existing = [str(path) for path in (routing_path, provider_path) if path.exists()]
+    existing = [str(path) for path in (config_path,) if path.exists()]
     if existing and not overwrite:
         typer.secho(
             "Refusing to overwrite existing files (use --overwrite):\n"
@@ -174,19 +171,13 @@ def config_init_command(
         raise typer.Exit(code=2)
 
     ensure_directory(base_dir)
-    ensure_directory(providers_dir)
 
-    routing_path.write_text(
+    config_path.write_text(
         yaml.safe_dump(routing_doc, sort_keys=False), encoding="utf-8"
-    )
-    provider_ref = build_provider_reference_from_preset(provider)
-    provider_path.write_text(
-        yaml.safe_dump(provider_ref, sort_keys=False),
-        encoding="utf-8",
     )
 
     typer.secho(
-        f"Initialized routing config:\n- {routing_path}\n- {provider_path}",
+        f"Initialized config:\n- {config_path}",
         fg=typer.colors.GREEN,
     )
 
