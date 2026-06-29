@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+import re
 from typing import Any
 
 _DEFAULT_TASK_CLASS = "implementation"
@@ -32,6 +34,8 @@ _RISK_BY_TASK_CLASS: dict[str, str] = {
 }
 
 _CLASS_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "hld": ("hld", "high level design", "high-level design"),
+    "lld": ("lld", "low level design", "low-level design"),
     "security": ("auth", "permission", "token", "secret", "sandbox"),
     "architecture": (
         "architecture",
@@ -105,9 +109,20 @@ def _normalize_task_class(
 def _infer_task_class_from_prompt(prompt: str) -> str:
     lowered = prompt.lower()
     for task_class, keywords in _CLASS_KEYWORDS.items():
-        if any(keyword in lowered for keyword in keywords):
+        if any(_keyword_match(lowered, keyword) for keyword in keywords):
             return task_class
     return _DEFAULT_TASK_CLASS
+
+
+def _keyword_match(text: str, keyword: str) -> bool:
+    normalized_keyword = keyword.strip().lower()
+    if not normalized_keyword:
+        return False
+    parts = [re.escape(part) for part in normalized_keyword.split() if part]
+    if not parts:
+        return False
+    pattern = r"\b" + r"\s+".join(parts) + r"\b"
+    return re.search(pattern, text) is not None
 
 
 def _infer_risk(task_class: str, prompt: str) -> str:
@@ -145,8 +160,11 @@ def _coerce_complexity(value: Any) -> int | None:
         if not stripped:
             return None
         try:
-            parsed = int(float(stripped))
-        except ValueError:
+            parsed_float = float(stripped)
+            if not math.isfinite(parsed_float):
+                return None
+            parsed = int(parsed_float)
+        except (OverflowError, ValueError):
             return None
         return max(0, min(100, parsed))
     return None
@@ -203,7 +221,7 @@ def derive_task_metadata(
     user_required_raw = constraints_map.get("user_required_capabilities")
     user_required = (
         [
-            capability.lower()
+            capability.strip().lower()
             for capability in user_required_raw
             if isinstance(capability, str) and capability.strip()
         ]

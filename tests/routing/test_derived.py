@@ -12,8 +12,8 @@ def test_derives_metadata_from_minimal_request() -> None:
         }
     )
 
-    assert result["derived"]["task_class"] == "architecture"
-    assert result["derived"]["risk"] == "high"
+    assert result["derived"]["task_class"] == "lld"
+    assert result["derived"]["risk"] == "medium"
     assert result["derived"]["complexity"] >= 35
     assert result["derived"]["required_capabilities"] == ["design", "reasoning"]
 
@@ -79,3 +79,58 @@ def test_applies_taxonomy_alias_when_task_type_provided() -> None:
 
     assert result["derived"]["task_class"] == "frontend"
     assert result["provenance"]["task_class"] == "caller_hint_alias"
+
+
+def test_infers_lld_from_prompt_keyword() -> None:
+    result = derive_task_metadata(
+        {
+            "prompt": "Please write an LLD for cache invalidation strategy",
+        }
+    )
+
+    assert result["derived"]["task_class"] == "lld"
+    assert result["provenance"]["task_class"] == "inferred"
+
+
+def test_task_class_keyword_matching_is_boundary_aware() -> None:
+    result = derive_task_metadata(
+        {
+            "prompt": "Build tooling for deployment automation",
+        }
+    )
+
+    assert result["derived"]["task_class"] == "implementation"
+
+
+def test_user_required_capabilities_are_trimmed_before_dedup() -> None:
+    result = derive_task_metadata(
+        {
+            "prompt": "Design an LLD for API retries",
+            "task_type": "lld",
+            "constraints": {
+                "user_required_capabilities": [
+                    " design ",
+                    "reasoning",
+                    " security_analysis ",
+                ]
+            },
+        }
+    )
+
+    assert result["derived"]["required_capabilities"] == [
+        "design",
+        "reasoning",
+        "security_analysis",
+    ]
+
+
+def test_non_finite_complexity_hint_falls_back_to_inferred() -> None:
+    result = derive_task_metadata(
+        {
+            "prompt": "Implement health-check endpoint",
+            "hints": {"complexity": "1e309"},
+        }
+    )
+
+    assert result["provenance"]["complexity"] == "inferred"
+    assert isinstance(result["derived"]["complexity"], int)
