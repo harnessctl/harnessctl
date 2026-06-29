@@ -51,6 +51,40 @@ def _format_validation_error(error: ValidationError | SchemaError) -> str:
     return f"Schema validation failed: {error.message}"
 
 
+def _validate_agent_registry_semantics(document: dict[str, Any]) -> None:
+    """Validate semantic constraints not expressible in base JSON schema."""
+    spec = document.get("spec")
+    if not isinstance(spec, dict):
+        return
+
+    registry = spec.get("agent_registry")
+    if not isinstance(registry, dict):
+        return
+
+    agents = registry.get("agents")
+    if not isinstance(agents, list):
+        return
+
+    seen_agent_ids: set[str] = set()
+    duplicate_ids: set[str] = set()
+    for agent in agents:
+        if not isinstance(agent, dict):
+            continue
+        agent_id = agent.get("id")
+        if not isinstance(agent_id, str) or not agent_id:
+            continue
+        if agent_id in seen_agent_ids:
+            duplicate_ids.add(agent_id)
+        seen_agent_ids.add(agent_id)
+
+    if duplicate_ids:
+        duplicates = ", ".join(sorted(duplicate_ids))
+        raise RoutingConfigSchemaError(
+            "Schema validation failed at 'spec.agent_registry.agents': "
+            f"duplicate agent id(s): {duplicates}"
+        )
+
+
 def validate_routing_config_document(document: dict[str, Any]) -> None:
     """Validate routing config document against mapped versioned schema.
 
@@ -71,6 +105,7 @@ def validate_routing_config_document(document: dict[str, Any]) -> None:
     try:
         Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(routing_document)
+        _validate_agent_registry_semantics(routing_document)
     except SchemaError as exc:
         raise RoutingConfigSchemaError(_format_validation_error(exc)) from exc
     except ValidationError as exc:
