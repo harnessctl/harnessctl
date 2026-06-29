@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import ValidationError
+from jsonschema.exceptions import SchemaError, ValidationError
 
 from harnessctl.config.schema_registry import get_schema_path_for_api_version
 
@@ -44,7 +44,7 @@ def _require_object(value: Any, *, field_name: str) -> dict[str, Any]:
     return value
 
 
-def _format_validation_error(error: ValidationError) -> str:
+def _format_validation_error(error: ValidationError | SchemaError) -> str:
     if error.path:
         path = ".".join(str(part) for part in error.path)
         return f"Schema validation failed at '{path}': {error.message}"
@@ -69,6 +69,9 @@ def validate_routing_config_document(document: dict[str, Any]) -> None:
 
     schema = _load_json(schema_path)
     try:
+        Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(routing_document)
+    except SchemaError as exc:
+        raise RoutingConfigSchemaError(_format_validation_error(exc)) from exc
     except ValidationError as exc:
         raise RoutingConfigSchemaError(_format_validation_error(exc)) from exc
