@@ -17,7 +17,17 @@ def _valid_routing_config() -> dict[str, object]:
         "metadata": {"name": "default"},
         "spec": {
             "taxonomy": {},
-            "agent_registry": {},
+            "agent_registry": {
+                "agents": [
+                    {
+                        "id": "agent-default",
+                        "model": "github-copilot/gpt-5-mini",
+                        "provider": "github-copilot",
+                        "tier": "strong",
+                        "capabilities": ["implementation", "review"],
+                    }
+                ]
+            },
             "routing": {},
             "escalation": {},
         },
@@ -82,5 +92,49 @@ def test_null_metadata_name_fails() -> None:
     with pytest.raises(
         RoutingConfigSchemaError,
         match=r"Schema validation failed at 'metadata\.name': None is not of type 'string'",
+    ):
+        validate_routing_config_document(doc)
+
+
+def test_missing_agent_required_field_fails() -> None:
+    doc = _valid_routing_config()
+    agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
+    agents[0].pop("model")  # type: ignore[index]
+    with pytest.raises(
+        RoutingConfigSchemaError,
+        match=r"Schema validation failed at 'spec\.agent_registry\.agents\.0': 'model' is a required property",
+    ):
+        validate_routing_config_document(doc)
+
+
+def test_rejects_duplicate_agent_ids() -> None:
+    doc = _valid_routing_config()
+    agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
+    agents.append(agents[0].copy())  # type: ignore[union-attr]
+    with pytest.raises(
+        RoutingConfigSchemaError,
+        match=r"duplicate agent id\(s\): agent-default",
+    ):
+        validate_routing_config_document(doc)
+
+
+def test_rejects_invalid_agent_tier() -> None:
+    doc = _valid_routing_config()
+    agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
+    agents[0]["tier"] = "ultra"  # type: ignore[index]
+    with pytest.raises(
+        RoutingConfigSchemaError,
+        match=r"Schema validation failed at 'spec\.agent_registry\.agents\.0\.tier': 'ultra' is not one of",
+    ):
+        validate_routing_config_document(doc)
+
+
+def test_rejects_malformed_agent_capabilities() -> None:
+    doc = _valid_routing_config()
+    agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
+    agents[0]["capabilities"] = ["implementation", "implementation"]  # type: ignore[index]
+    with pytest.raises(
+        RoutingConfigSchemaError,
+        match=r"Schema validation failed at 'spec\.agent_registry\.agents\.0\.capabilities': \['implementation', 'implementation'\] has non-unique elements",
     ):
         validate_routing_config_document(doc)
