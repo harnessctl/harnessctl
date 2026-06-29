@@ -42,7 +42,7 @@ def test_requires_exactly_one_target(tmp_path: Path) -> None:
     assert "exactly one target" in result.stdout
 
 
-def test_init_global_creates_routing_and_provider_files(tmp_path: Path) -> None:
+def test_init_global_creates_single_config_file(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
         ["config", "init", "--provider", "github-copilot", "--global"],
@@ -50,14 +50,16 @@ def test_init_global_creates_routing_and_provider_files(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0
 
-    routing = tmp_path / "global-home" / "routing.yaml"
-    provider = tmp_path / "global-home" / "providers" / "github-copilot.yaml"
-    assert routing.exists()
-    assert provider.exists()
+    config = tmp_path / "global-home" / "config.yaml"
+    assert config.exists()
 
-    routing_doc = _read_yaml(routing)
-    assert routing_doc["apiVersion"] == "harnessctl/v1alpha1"
-    assert routing_doc["kind"] == "RoutingConfig"
+    config_doc = _read_yaml(config)
+    assert config_doc["apiVersion"] == "harnessctl/v1alpha1"
+    assert config_doc["kind"] == "RoutingConfig"
+    agents = config_doc["spec"]["agent_registry"]["agents"]
+    assert agents[0]["provider"] == "github-copilot"
+    assert agents[0]["model"] == "github-copilot/gpt-5-mini"
+    assert config_doc["spec"]["provider_presets"] == ["github-copilot"]
 
 
 def test_init_project_creates_files_under_project_harnessctl(tmp_path: Path) -> None:
@@ -75,10 +77,14 @@ def test_init_project_creates_files_under_project_harnessctl(tmp_path: Path) -> 
     )
     assert result.exit_code == 0
 
-    routing = project / ".harnessctl" / "routing.yaml"
-    provider = project / ".harnessctl" / "providers" / "openrouter.yaml"
-    assert routing.exists()
-    assert provider.exists()
+    config = project / ".harnessctl" / "config.yaml"
+    assert config.exists()
+
+    config_doc = _read_yaml(config)
+    agents = config_doc["spec"]["agent_registry"]["agents"]
+    assert agents[0]["provider"] == "openrouter"
+    assert agents[0]["model"] == "openrouter/anthropic/claude-3.5-sonnet"
+    assert config_doc["spec"]["provider_presets"] == ["openrouter"]
 
 
 def test_init_fails_on_existing_without_overwrite(tmp_path: Path) -> None:

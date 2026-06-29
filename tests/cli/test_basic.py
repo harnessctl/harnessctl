@@ -72,7 +72,7 @@ def test_cli_config_init_command_executes(tmp_path):
         env={"HARNESSCTL_HOME": str(tmp_path / "home")},
     )
     assert result.exit_code == 0
-    assert "Initialized routing config" in result.stdout
+    assert "Initialized config" in result.stdout
 
 
 def test_cli_prompts_install_stub_exit_code_and_message():
