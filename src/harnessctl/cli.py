@@ -108,7 +108,17 @@ def _load_request_payload(
         if not request_file.exists():
             typer.secho(f"Request file not found: {request_file}", fg=typer.colors.RED)
             raise typer.Exit(code=2)
-        raw_payload = request_file.read_text(encoding="utf-8")
+        if not request_file.is_file():
+            typer.secho(
+                f"Request file is not a regular file: {request_file}",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=2)
+        try:
+            raw_payload = request_file.read_text(encoding="utf-8")
+        except OSError as exc:
+            typer.secho(f"Failed to read request file: {exc}", fg=typer.colors.RED)
+            raise typer.Exit(code=2) from exc
 
     try:
         parsed = json.loads(raw_payload)
@@ -130,9 +140,15 @@ def _load_routing_config(config_file: Path | None) -> dict[str, object]:
     if not path.exists():
         typer.secho(f"Config file not found: {path}", fg=typer.colors.RED)
         raise typer.Exit(code=2)
+    if not path.is_file():
+        typer.secho(f"Config path is not a regular file: {path}", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
 
     try:
         loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        typer.secho(f"Failed to read config file: {exc}", fg=typer.colors.RED)
+        raise typer.Exit(code=2) from exc
     except yaml.YAMLError as exc:
         typer.secho(f"Invalid YAML in config file: {exc}", fg=typer.colors.RED)
         raise typer.Exit(code=2) from exc
@@ -167,7 +183,7 @@ def _matching_rule_names(
         return []
 
     task_type = (
-        str(request.get("task_type") or derived.get("task_class") or "").strip().lower()
+        str(derived.get("task_class") or request.get("task_type") or "").strip().lower()
     )
     complexity = derived.get("complexity")
     complexity_value = complexity if isinstance(complexity, (int, float)) else None
