@@ -18,7 +18,7 @@ def _package_schema_base_dir() -> Path | None:
 
 
 def _source_schema_base_dir() -> Path:
-    return (Path(__file__).resolve().parents[3] / "schemas" / "config").resolve()
+    return (Path(__file__).resolve().parents[1] / "schemas" / "config").resolve()
 
 
 def get_schema_path_for_api_version(api_version: str) -> Path:
