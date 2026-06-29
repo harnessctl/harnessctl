@@ -59,10 +59,10 @@ def test_cli_prompts_help():
     assert "--harness" in render_help.stdout
 
 
-def test_cli_stub_exit_code_and_message():
+def test_cli_mcp_select_model_requires_request_source():
     result = runner.invoke(app, ["mcp", "select_model_for_task"])
     assert result.exit_code == 2
-    assert "Not implemented yet: mcp select_model_for_task" in result.stdout
+    assert "exactly one of --request-json or --request-file" in result.stdout
 
 
 def test_cli_config_init_command_executes(tmp_path):
