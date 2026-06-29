@@ -1,4 +1,4 @@
-from harnessctl.discovery.taxonomy import TaxonomyClient
+from harnessctl.discovery.taxonomy import TaxonomyClient, get_taxonomy_url
 import msgpack
 import zstandard as zstd
 from httpx import Response
@@ -17,7 +17,7 @@ def test_taxonomy_client(respx_mock, tmp_path, monkeypatch):
     cctx = zstd.ZstdCompressor(level=1)
     compressed = cctx.compress(packed)
 
-    url = "https://github.com/harnessctl/harness-taxonomy/releases/latest/download/taxonomy.msgpack.zst"
+    url = get_taxonomy_url("latest")
 
     # Mock HEAD
     respx_mock.head(url).mock(
@@ -25,7 +25,6 @@ def test_taxonomy_client(respx_mock, tmp_path, monkeypatch):
     )
     # Mock GET
     respx_mock.get(url).mock(return_value=Response(200, content=compressed))
-
     client = TaxonomyClient()
     data = client.fetch()
 
