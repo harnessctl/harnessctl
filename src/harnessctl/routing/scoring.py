@@ -107,6 +107,11 @@ def select_primary_candidate(
     Returns:
         Dict with selected candidate id, selected candidate object, and ranked list.
     """
+    if not isinstance(objective, str):
+        raise ValueError(
+            "Unsupported scoring objective. Expected one of: cost, cost_per_success"
+        )
+
     normalized_objective = objective.strip().lower()
     if normalized_objective not in _VALID_OBJECTIVES:
         raise ValueError(

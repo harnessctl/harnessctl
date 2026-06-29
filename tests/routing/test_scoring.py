@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from harnessctl.routing.scoring import select_primary_candidate
+import pytest
+
+from harnessctl.routing import select_primary_candidate
 
 
 def _request() -> dict[str, object]:
@@ -139,3 +141,37 @@ def test_unknown_scores_sorted_last() -> None:
     ranked = result["ranked_candidates"]
     assert ranked[0]["agent_id"] == "known-cost"
     assert ranked[1]["agent_id"] == "unknown-cost"
+
+
+def test_non_string_objective_returns_value_error() -> None:
+    with pytest.raises(ValueError, match="Unsupported scoring objective"):
+        select_primary_candidate(
+            request=_request(),
+            candidates=[
+                {"id": "a", "tier": "medium", "cost": {"estimated_cost_usd": 0.2}}
+            ],
+            objective=123,  # type: ignore[arg-type]
+        )
+
+
+def test_non_finite_cost_is_treated_as_unknown() -> None:
+    result = select_primary_candidate(
+        request=_request(),
+        candidates=[
+            {
+                "id": "nan-cost",
+                "tier": "reasoning",
+                "cost": {"estimated_cost_usd": "nan"},
+            },
+            {
+                "id": "known-cost",
+                "tier": "cheap",
+                "cost": {"estimated_cost_usd": 0.2},
+            },
+        ],
+        objective="cost",
+    )
+
+    ranked = result["ranked_candidates"]
+    assert ranked[0]["agent_id"] == "known-cost"
+    assert ranked[1]["agent_id"] == "nan-cost"

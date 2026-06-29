@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 from typing import Any
 
 _TIER_RANK: dict[str, int] = {
@@ -55,17 +56,20 @@ def _normalize_routing_derived(derived_metadata: dict[str, Any]) -> dict[str, An
 def _coerce_float(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
+    candidate: float | None = None
     if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
+        candidate = float(value)
+    elif isinstance(value, str):
         stripped = value.strip()
         if not stripped:
             return None
         try:
-            return float(stripped)
+            candidate = float(stripped)
         except ValueError:
             return None
-    return None
+    if candidate is None or not math.isfinite(candidate):
+        return None
+    return candidate
 
 
 def _risk_floor_for_task_class(config: dict[str, Any], task_class: str) -> str | None:
