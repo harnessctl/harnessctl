@@ -14,9 +14,11 @@ def test_cli_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "harnessctl: Manage AI harness configurations and agents" in result.stdout
-    assert "config" in result.stdout
-    assert "prompts" in result.stdout
-    assert "mcp" in result.stdout
+    assert "Manage routing configuration and bootstrap workflows" in result.stdout
+    assert "Manage harness-aware prompt bundles" in result.stdout
+    assert (
+        "MCP entrypoints for integration with external orchestrators" in result.stdout
+    )
 
 
 def test_cli_validate_missing_config():
@@ -37,12 +39,24 @@ def test_cli_config_help():
     assert result.exit_code == 0
     assert "init" in result.stdout
 
+    init_help = runner.invoke(app, ["config", "init", "--help"])
+    assert init_help.exit_code == 0
+    assert "--provider" in init_help.stdout
+
 
 def test_cli_prompts_help():
     result = runner.invoke(app, ["prompts", "--help"])
     assert result.exit_code == 0
     assert "install" in result.stdout
     assert "render" in result.stdout
+
+    install_help = runner.invoke(app, ["prompts", "install", "--help"])
+    assert install_help.exit_code == 0
+    assert "--harness" in install_help.stdout
+
+    render_help = runner.invoke(app, ["prompts", "render", "--help"])
+    assert render_help.exit_code == 0
+    assert "--harness" in render_help.stdout
 
 
 def test_cli_stub_exit_code_and_message():
