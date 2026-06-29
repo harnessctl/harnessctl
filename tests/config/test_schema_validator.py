@@ -118,6 +118,16 @@ def test_rejects_duplicate_agent_ids() -> None:
         validate_routing_config_document(doc)
 
 
+def test_rejects_empty_agent_registry() -> None:
+    doc = _valid_routing_config()
+    doc["spec"]["agent_registry"]["agents"] = []  # type: ignore[index]
+    with pytest.raises(
+        RoutingConfigSchemaError,
+        match=r"Schema validation failed at 'spec\.agent_registry\.agents': \[\] should be non-empty",
+    ):
+        validate_routing_config_document(doc)
+
+
 def test_rejects_invalid_agent_tier() -> None:
     doc = _valid_routing_config()
     agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
@@ -136,5 +146,16 @@ def test_rejects_malformed_agent_capabilities() -> None:
     with pytest.raises(
         RoutingConfigSchemaError,
         match=r"Schema validation failed at 'spec\.agent_registry\.agents\.0\.capabilities': \['implementation', 'implementation'\] has non-unique elements",
+    ):
+        validate_routing_config_document(doc)
+
+
+def test_rejects_whitespace_only_agent_fields() -> None:
+    doc = _valid_routing_config()
+    agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
+    agents[0]["id"] = "   "  # type: ignore[index]
+    with pytest.raises(
+        RoutingConfigSchemaError,
+        match=r"Schema validation failed at 'spec\.agent_registry\.agents\.0\.id': '   ' does not match",
     ):
         validate_routing_config_document(doc)
