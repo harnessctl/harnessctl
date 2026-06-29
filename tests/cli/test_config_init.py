@@ -58,6 +58,13 @@ def test_init_global_creates_routing_and_provider_files(tmp_path: Path) -> None:
     routing_doc = _read_yaml(routing)
     assert routing_doc["apiVersion"] == "harnessctl/v1alpha1"
     assert routing_doc["kind"] == "RoutingConfig"
+    agents = routing_doc["spec"]["agent_registry"]["agents"]
+    assert agents[0]["provider"] == "github-copilot"
+    assert agents[0]["model"] == "github-copilot/gpt-5-mini"
+
+    provider_doc = _read_yaml(provider)
+    assert provider_doc["metadata"]["name"] == "github-copilot"
+    assert provider_doc["spec"]["provider"] == "github-copilot"
 
 
 def test_init_project_creates_files_under_project_harnessctl(tmp_path: Path) -> None:
@@ -79,6 +86,11 @@ def test_init_project_creates_files_under_project_harnessctl(tmp_path: Path) -> 
     provider = project / ".harnessctl" / "providers" / "openrouter.yaml"
     assert routing.exists()
     assert provider.exists()
+
+    routing_doc = _read_yaml(routing)
+    agents = routing_doc["spec"]["agent_registry"]["agents"]
+    assert agents[0]["provider"] == "openrouter"
+    assert agents[0]["model"] == "openrouter/anthropic/claude-3.5-sonnet"
 
 
 def test_init_fails_on_existing_without_overwrite(tmp_path: Path) -> None:

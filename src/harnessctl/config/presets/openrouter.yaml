@@ -1,0 +1,15 @@
+apiVersion: harnessctl/v1alpha1
+kind: ProviderPreset
+metadata:
+  name: openrouter
+spec:
+  provider: openrouter
+  defaults:
+    agents:
+      - id: openrouter-default
+        model: openrouter/anthropic/claude-3.5-sonnet
+        provider: openrouter
+        tier: strong
+        capabilities:
+          - implementation
+          - review

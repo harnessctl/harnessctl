@@ -1,0 +1,16 @@
+apiVersion: harnessctl/v1alpha1
+kind: ProviderPreset
+metadata:
+  name: github-copilot
+spec:
+  provider: github-copilot
+  defaults:
+    agents:
+      - id: copilot-default
+        model: github-copilot/gpt-5-mini
+        provider: github-copilot
+        tier: strong
+        capabilities:
+          - implementation
+          - review
+          - reasoning
