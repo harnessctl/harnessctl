@@ -19,6 +19,13 @@ def _read_yaml(path: Path) -> dict[str, object]:
 
 
 def test_requires_exactly_one_target(tmp_path: Path) -> None:
+    missing = runner.invoke(
+        app,
+        ["config", "init", "--provider", "github-copilot"],
+    )
+    assert missing.exit_code == 2
+    assert "exactly one target" in missing.stdout
+
     result = runner.invoke(
         app,
         [

@@ -234,11 +234,11 @@ def config_init_command(
         raise typer.Exit(code=2) from exc
 
     if global_scope:
-        base_dir = ensure_directory(get_global_config_base_dir())
+        base_dir = get_global_config_base_dir()
     else:
-        base_dir = ensure_directory(get_project_config_base_dir(project))
+        base_dir = get_project_config_base_dir(project)
 
-    providers_dir = ensure_directory(base_dir / "providers")
+    providers_dir = base_dir / "providers"
     routing_path = base_dir / "routing.yaml"
     provider_path = providers_dir / f"{provider}.yaml"
 
@@ -250,6 +250,9 @@ def config_init_command(
             fg=typer.colors.RED,
         )
         raise typer.Exit(code=2)
+
+    ensure_directory(base_dir)
+    ensure_directory(providers_dir)
 
     routing_path.write_text(
         yaml.safe_dump(routing_doc, sort_keys=False), encoding="utf-8"
