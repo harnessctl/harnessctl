@@ -70,6 +70,10 @@
                       "pattern": "\\S"
                     },
                     "uniqueItems": true
+                  },
+                  "cost_band": {
+                    "type": "string",
+                    "enum": ["free", "cheap", "budget", "standard", "premium", "expensive", "draconic"]
                   }
                 },
                 "additionalProperties": true

@@ -16,6 +16,7 @@
   - [Agent Topology](#agent-topology)
   - [MCP Servers](#mcp-servers)
 - [Command Reference](#command-reference)
+  - [v1 Operator Workflow](#v1-operator-workflow)
   - [Lifecycle Commands](#lifecycle-commands)
   - [Discovery & Model Intelligence](#discovery--model-intelligence)
   - [Topology Visualization](#topology-visualization)
@@ -145,6 +146,21 @@ mcp:
 ---
 
 ## Command Reference
+
+### v1 Operator Workflow
+
+For the v1 operator commands and MCP decision contract examples, use:
+
+- `docs/operators/v1-operator-guide.md`
+- `docs/verification/issue-23-operator-docs-repro.md`
+
+This workflow covers:
+
+- `config init`
+- `prompts install`
+- `prompts render`
+- `mcp select_model_for_task`
+- schema validation failures and remediation.
 
 ### Lifecycle Commands
 

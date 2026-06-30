@@ -19,6 +19,16 @@ _CONTEXT_SIZE_TOKENS: dict[str, tuple[int, int]] = {
     "large": (40_000, 4_000),
 }
 
+_COST_BAND_ESTIMATED_USD: dict[str, float] = {
+    "free": 0.0,
+    "cheap": 0.06,
+    "budget": 0.12,
+    "standard": 0.2,
+    "premium": 0.32,
+    "expensive": 0.5,
+    "draconic": 0.9,
+}
+
 
 @dataclass(slots=True)
 class PolicyGateError(Exception):
@@ -116,19 +126,29 @@ def _estimate_agent_cost_usd(
 
     input_per_1m = _coerce_float(cost.get("input_per_1m"))
     output_per_1m = _coerce_float(cost.get("output_per_1m"))
-    if input_per_1m is None or output_per_1m is None:
-        return None
+    if (
+        input_per_1m is not None
+        and output_per_1m is not None
+        and input_per_1m >= 0
+        and output_per_1m >= 0
+    ):
+        estimated_input, estimated_output = _resolve_token_estimates(request)
+        if estimated_input is not None and estimated_output is not None:
+            token_estimated = (estimated_input / 1_000_000.0 * input_per_1m) + (
+                estimated_output / 1_000_000.0 * output_per_1m
+            )
+            if token_estimated >= 0:
+                return token_estimated
 
-    estimated_input, estimated_output = _resolve_token_estimates(request)
-    if estimated_input is None or estimated_output is None:
-        return None
+    cost_band_raw = agent.get("cost_band")
+    if not isinstance(cost_band_raw, str):
+        cost_band_raw = cost.get("cost_band")
+    if isinstance(cost_band_raw, str):
+        normalized_band = cost_band_raw.strip().lower()
+        if normalized_band in _COST_BAND_ESTIMATED_USD:
+            return _COST_BAND_ESTIMATED_USD[normalized_band]
 
-    if input_per_1m < 0 or output_per_1m < 0:
-        return None
-
-    return (estimated_input / 1_000_000.0 * input_per_1m) + (
-        estimated_output / 1_000_000.0 * output_per_1m
-    )
+    return None
 
 
 def apply_policy_gates(
