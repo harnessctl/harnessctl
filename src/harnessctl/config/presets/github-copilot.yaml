@@ -5,12 +5,170 @@ metadata:
 spec:
   provider: github-copilot
   defaults:
+    taxonomy:
+      task_classes:
+        - implementation
+        - review
+        - docs
+        - frontend
+        - backend
+        - security
+        - architecture
+        - debugging
+        - performance
+        - gaming
+        - migration
+        - hld
+        - lld
+      aliases:
+        ui: frontend
+        ux: frontend
+        game: gaming
+        infra: backend
+    policies:
+      risk:
+        min_tier_by_task_class:
+          security: strong
+          architecture: strong
+          hld: strong
+          lld: medium
+          frontend: medium
+          gaming: medium
+          docs: cheap
     agents:
-      - id: copilot-default
+      - id: copilot-fast
         model: github-copilot/gpt-5-mini
         provider: github-copilot
-        tier: strong
+        tier: cheap
         capabilities:
           - implementation
           - review
+          - docs
+        cost_band: cheap
+      - id: copilot-balanced
+        model: github-copilot/gpt-5.4-mini
+        provider: github-copilot
+        tier: medium
+        capabilities:
+          - implementation
+          - review
+          - debugging
+        cost_band: standard
+      - id: copilot-architect
+        model: github-copilot/gpt-5.4
+        provider: github-copilot
+        tier: strong
+        capabilities:
           - reasoning
+          - design
+          - architecture
+          - lld
+          - hld
+        cost_band: expensive
+      - id: copilot-frontline
+        model: github-copilot/claude-sonnet-4.5
+        provider: github-copilot
+        tier: strong
+        capabilities:
+          - frontend
+          - review
+          - implementation
+        cost_band: premium
+      - id: copilot-secure
+        model: github-copilot/o3
+        provider: github-copilot
+        tier: reasoning
+        capabilities:
+          - security_analysis
+          - reasoning
+          - architecture
+          - review
+        cost_band: draconic
+      - id: copilot-gaming
+        model: github-copilot/gemini-2.5-pro
+        provider: github-copilot
+        tier: strong
+        capabilities:
+          - gaming
+          - shader
+          - physics
+          - implementation
+        cost_band: expensive
+      - id: copilot-editor
+        model: github-copilot/gpt-4.1
+        provider: github-copilot
+        tier: medium
+        capabilities:
+          - docs
+          - review
+          - refactor
+        cost_band: budget
+    routing_rules:
+      - name: security-critical
+        when:
+          task_type_in: [security, architecture, hld]
+        choose:
+          preferred_tiers: [reasoning, strong]
+          optimize_for: cost_per_success
+      - name: frontend-work
+        when:
+          task_type_in: [frontend, ui, ux]
+        choose:
+          preferred_tiers: [medium, strong]
+          optimize_for: cost_per_success
+      - name: gameplay-work
+        when:
+          task_type_in: [gaming]
+        choose:
+          preferred_tiers: [strong, reasoning]
+          optimize_for: cost_per_success
+      - name: implementation-default
+        when:
+          task_type_in: [implementation, review, docs, backend, debugging, migration]
+        choose:
+          preferred_tiers: [cheap, medium, strong]
+          optimize_for: cost
+    escalation:
+      strategy:
+        keying: task_class
+        fallback_on_unknown_task_class: default
+      chains:
+        - name: default
+          tiers: [cheap, medium, strong, reasoning]
+        - name: security
+          tiers: [strong, reasoning]
+        - name: frontend
+          tiers: [medium, strong, reasoning]
+        - name: gaming
+          tiers: [strong, reasoning]
+        - name: lld
+          tiers: [medium, strong, reasoning]
+        - name: hld
+          tiers: [strong, reasoning]
+      keyword_overrides:
+        - name: security-terms
+          match_any: [auth, permission, token, secret, sandbox]
+          use_chain: security
+        - name: frontend-terms
+          match_any: [react, vue, css, accessibility, ui, ux]
+          use_chain: frontend
+        - name: gameplay-terms
+          match_any: [godot, shader, gameplay, physics]
+          use_chain: gaming
+      failure_policies:
+        syntax_error:
+          action: retry_same_tier
+          max_retries: 1
+        bad_output_format:
+          action: retry_with_stricter_prompt
+          max_retries: 1
+        test_failure:
+          action: retry_same_tier_then_escalate
+          max_retries: 2
+        wrong_solution:
+          action: escalate_next_tier
+        loop_detected:
+          action: escalate_or_stop
+        security_risk:
+          action: escalate_to_reasoning
+      max_attempts_per_tier: 2

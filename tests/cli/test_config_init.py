@@ -57,8 +57,17 @@ def test_init_global_creates_single_config_file(tmp_path: Path) -> None:
     assert config_doc["apiVersion"] == "harnessctl/v1alpha1"
     assert config_doc["kind"] == "RoutingConfig"
     agents = config_doc["spec"]["agent_registry"]["agents"]
+    assert len(agents) >= 5
     assert agents[0]["provider"] == "github-copilot"
-    assert agents[0]["model"] == "github-copilot/gpt-5-mini"
+    assert any(agent["model"] == "github-copilot/gpt-5.4" for agent in agents)
+    assert any(agent.get("cost_band") == "draconic" for agent in agents)
+
+    taxonomy = config_doc["spec"]["taxonomy"]
+    assert "frontend" in taxonomy["task_classes"]
+    assert taxonomy["aliases"]["ui"] == "frontend"
+
+    rule_names = [rule["name"] for rule in config_doc["spec"]["routing"]["rules"]]
+    assert "security-critical" in rule_names
     assert config_doc["spec"]["provider_presets"] == ["github-copilot"]
 
 
@@ -82,8 +91,13 @@ def test_init_project_creates_files_under_project_harnessctl(tmp_path: Path) -> 
 
     config_doc = _read_yaml(config)
     agents = config_doc["spec"]["agent_registry"]["agents"]
+    assert len(agents) >= 3
     assert agents[0]["provider"] == "openrouter"
-    assert agents[0]["model"] == "openrouter/anthropic/claude-3.5-sonnet"
+    assert any(agent["tier"] == "reasoning" for agent in agents)
+    assert any(agent.get("cost_band") == "draconic" for agent in agents)
+
+    rule_names = [rule["name"] for rule in config_doc["spec"]["routing"]["rules"]]
+    assert "architecture-security" in rule_names
     assert config_doc["spec"]["provider_presets"] == ["openrouter"]
 
 
