@@ -159,3 +159,21 @@ def test_rejects_whitespace_only_agent_fields() -> None:
         match=r"Schema validation failed at 'spec\.agent_registry\.agents\.0\.id': '   ' does not match",
     ):
         validate_routing_config_document(doc)
+
+
+def test_accepts_valid_agent_cost_band() -> None:
+    doc = _valid_routing_config()
+    agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
+    agents[0]["cost_band"] = "premium"  # type: ignore[index]
+    validate_routing_config_document(doc)
+
+
+def test_rejects_invalid_agent_cost_band() -> None:
+    doc = _valid_routing_config()
+    agents = doc["spec"]["agent_registry"]["agents"]  # type: ignore[index]
+    agents[0]["cost_band"] = "ultra-cheap"  # type: ignore[index]
+    with pytest.raises(
+        RoutingConfigSchemaError,
+        match=r"Schema validation failed at 'spec\.agent_registry\.agents\.0\.cost_band': 'ultra-cheap' is not one of",
+    ):
+        validate_routing_config_document(doc)

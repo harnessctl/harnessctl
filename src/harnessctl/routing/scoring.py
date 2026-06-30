@@ -8,32 +8,14 @@ from harnessctl.routing.policy import (
     _TIER_RANK,
     _as_dict,
     _coerce_float,
-    _resolve_token_estimates,
+    _estimate_agent_cost_usd,
 )
 
 _VALID_OBJECTIVES = {"cost", "cost_per_success"}
 
 
 def _estimate_cost_usd(agent: dict[str, Any], request: dict[str, Any]) -> float | None:
-    cost = _as_dict(agent.get("cost"))
-    direct = _coerce_float(cost.get("estimated_cost_usd"))
-    if direct is not None and direct >= 0:
-        return direct
-
-    input_per_1m = _coerce_float(cost.get("input_per_1m"))
-    output_per_1m = _coerce_float(cost.get("output_per_1m"))
-    if input_per_1m is None or output_per_1m is None:
-        return None
-    if input_per_1m < 0 or output_per_1m < 0:
-        return None
-
-    estimated_input, estimated_output = _resolve_token_estimates(request)
-    if estimated_input is None or estimated_output is None:
-        return None
-
-    return (estimated_input / 1_000_000.0 * input_per_1m) + (
-        estimated_output / 1_000_000.0 * output_per_1m
-    )
+    return _estimate_agent_cost_usd(agent, request)
 
 
 def _success_probability(agent: dict[str, Any]) -> float | None:

@@ -175,3 +175,24 @@ def test_non_finite_cost_is_treated_as_unknown() -> None:
     ranked = result["ranked_candidates"]
     assert ranked[0]["agent_id"] == "known-cost"
     assert ranked[1]["agent_id"] == "nan-cost"
+
+
+def test_cost_band_fallback_is_used_for_cost_objective() -> None:
+    result = select_primary_candidate(
+        request=_request(),
+        candidates=[
+            {
+                "id": "draconic-agent",
+                "tier": "reasoning",
+                "cost_band": "draconic",
+            },
+            {
+                "id": "free-agent",
+                "tier": "cheap",
+                "cost_band": "free",
+            },
+        ],
+        objective="cost",
+    )
+
+    assert result["selected_agent_id"] == "free-agent"

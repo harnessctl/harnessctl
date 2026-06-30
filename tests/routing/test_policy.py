@@ -173,3 +173,39 @@ def test_policy_gates_no_registry_candidates() -> None:
 
     assert err.value.code == "NO_CANDIDATE_MATCH"
     assert err.value.details["gate"] == "registry"
+
+
+def test_policy_budget_uses_cost_band_fallback() -> None:
+    config = _base_config()
+    config["spec"]["agent_registry"]["agents"] = [
+        {
+            "id": "agent-free",
+            "provider": "github-copilot",
+            "model": "github-copilot/gpt-5-mini",
+            "tier": "cheap",
+            "capabilities": ["implementation", "review"],
+            "cost_band": "free",
+        },
+        {
+            "id": "agent-draconic",
+            "provider": "github-copilot",
+            "model": "github-copilot/gpt-5.5",
+            "tier": "reasoning",
+            "capabilities": ["implementation", "review"],
+            "cost_band": "draconic",
+        },
+    ]
+
+    request = _base_request()
+    request["constraints"] = {
+        "provider_allowlist": ["github-copilot"],
+        "max_cost_usd": 0.1,
+    }
+
+    result = apply_policy_gates(
+        request,
+        derived_metadata=_base_derived(),
+        routing_config=config,
+    )
+
+    assert [candidate["id"] for candidate in result["candidates"]] == ["agent-free"]
