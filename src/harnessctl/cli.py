@@ -64,6 +64,13 @@ mcp_app = typer.Typer(
 err_console = Console(stderr=True)
 console = Console()
 
+_SUPPORTED_PROMPT_HARNESSES = {
+    "opencode",
+    "pi",
+    "copilot-cli",
+    "claude-cli",
+}
+
 
 class AppContext:
     def __init__(self, config_path: Path):
@@ -259,6 +266,40 @@ def _estimate_cost_usd_from_agent(agent: dict[str, object]) -> float | None:
     return None
 
 
+def _normalize_harnesses(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        candidate = value.strip().lower()
+        if not candidate or candidate in seen:
+            continue
+        if candidate not in _SUPPORTED_PROMPT_HARNESSES:
+            supported = ", ".join(sorted(_SUPPORTED_PROMPT_HARNESSES))
+            typer.secho(
+                f"Unsupported harness '{value}'. Supported values: {supported}",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=2)
+        seen.add(candidate)
+        normalized.append(candidate)
+    if not normalized:
+        typer.secho(
+            "At least one valid --harness value is required.", fg=typer.colors.RED
+        )
+        raise typer.Exit(code=2)
+    return normalized
+
+
+def _render_prompt_bundle(*, harness: str, version: str) -> str:
+    return (
+        f"# harnessctl prompt bundle\n\n"
+        f"harness: {harness}\n"
+        f"version: {version}\n\n"
+        "You are the orchestrator. Route work by task class, apply policy gates before scoring, "
+        "and escalate using configured fallback chains."
+    )
+
+
 @app.callback()
 def main(
     ctx: typer.Context,
@@ -362,7 +403,7 @@ def config_init_command(
 
 
 @prompts_app.command(name="install")
-def prompts_install_stub(
+def prompts_install_command(
     harness: list[str] = typer.Option(
         ...,
         "--harness",
@@ -383,9 +424,53 @@ def prompts_install_stub(
         False, "--overwrite", help="Overwrite existing files."
     ),
 ) -> None:
-    """Install prompt bundles into harnessctl-managed paths (stub)."""
-    _ = (harness, version, global_scope, project, overwrite)
-    _not_implemented("prompts install")
+    """Install prompt bundles into harnessctl-managed paths."""
+    if global_scope == (project is not None):
+        typer.secho(
+            "You must specify exactly one target: --global or --project <path>",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+
+    selected_harnesses = _normalize_harnesses(harness)
+    normalized_version = version.strip()
+    if not normalized_version:
+        typer.secho("--version must be a non-empty value.", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+
+    if global_scope:
+        prompts_base_dir = get_global_config_base_dir() / "prompts"
+    else:
+        prompts_base_dir = get_project_config_base_dir(project) / "prompts"
+
+    target_files = [
+        prompts_base_dir / harness_name / normalized_version / "orchestrator.md"
+        for harness_name in selected_harnesses
+    ]
+
+    existing = [str(path) for path in target_files if path.exists()]
+    if existing and not overwrite:
+        typer.secho(
+            "Refusing to overwrite existing files (use --overwrite):\n"
+            + "\n".join(f"- {path}" for path in existing),
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+
+    written_paths: list[str] = []
+    for harness_name, output_path in zip(selected_harnesses, target_files):
+        ensure_directory(output_path.parent)
+        output_path.write_text(
+            _render_prompt_bundle(harness=harness_name, version=normalized_version),
+            encoding="utf-8",
+        )
+        written_paths.append(str(output_path))
+
+    typer.secho(
+        "Installed prompt bundles:\n"
+        + "\n".join(f"- {path}" for path in written_paths),
+        fg=typer.colors.GREEN,
+    )
 
 
 @prompts_app.command(name="render")

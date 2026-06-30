@@ -75,7 +75,7 @@ def test_cli_config_init_command_executes(tmp_path):
     assert "Initialized config" in result.stdout
 
 
-def test_cli_prompts_install_stub_exit_code_and_message():
+def test_cli_prompts_install_command_executes(tmp_path):
     result = runner.invoke(
         app,
         [
@@ -87,9 +87,10 @@ def test_cli_prompts_install_stub_exit_code_and_message():
             "v1",
             "--global",
         ],
+        env={"HARNESSCTL_HOME": str(tmp_path / "home")},
     )
-    assert result.exit_code == 2
-    assert "Not implemented yet: prompts install" in result.stdout
+    assert result.exit_code == 0
+    assert "Installed prompt bundles" in result.stdout
 
 
 def test_cli_prompts_render_stub_exit_code_and_message():
