@@ -293,14 +293,55 @@ def _normalize_harnesses(values: list[str]) -> list[str]:
     return normalized
 
 
-def _render_prompt_bundle(*, harness: str, version: str) -> str:
-    return (
+def _normalize_version_segment(version: str) -> str:
+    normalized_version = version.strip()
+    if not normalized_version:
+        typer.secho("--version must be a non-empty value.", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+    if (
+        "/" in normalized_version
+        or "\\" in normalized_version
+        or normalized_version in {".", ".."}
+        or ".." in normalized_version
+        or Path(normalized_version).is_absolute()
+        or _SAFE_VERSION_SEGMENT.fullmatch(normalized_version) is None
+    ):
+        typer.secho(
+            "--version must be a safe path segment (letters, numbers, dot, underscore, hyphen).",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+    return normalized_version
+
+
+def _parse_template_vars(values: list[str]) -> dict[str, str]:
+    variables: dict[str, str] = {}
+    for raw in values:
+        key, sep, value = raw.partition("=")
+        if sep != "=" or not key.strip():
+            typer.secho(
+                f"Invalid --var '{raw}'. Expected KEY=VALUE.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=2)
+        variables[key.strip()] = value
+    return variables
+
+
+def _render_prompt_bundle(
+    *, harness: str, version: str, variables: dict[str, str] | None = None
+) -> str:
+    rendered = (
         f"# harnessctl prompt bundle\n\n"
         f"harness: {harness}\n"
         f"version: {version}\n\n"
         "You are the orchestrator. Route work by task class, apply policy gates before scoring, "
-        "and escalate using configured fallback chains."
+        "and escalate using configured fallback chains.\n\n"
+        "tone: {{tone}}\n"
     )
+    for key, value in (variables or {}).items():
+        rendered = rendered.replace(f"{{{{{key}}}}}", value)
+    return rendered
 
 
 @app.callback()
@@ -436,23 +477,7 @@ def prompts_install_command(
         raise typer.Exit(code=2)
 
     selected_harnesses = _normalize_harnesses(harness)
-    normalized_version = version.strip()
-    if not normalized_version:
-        typer.secho("--version must be a non-empty value.", fg=typer.colors.RED)
-        raise typer.Exit(code=2)
-    if (
-        "/" in normalized_version
-        or "\\" in normalized_version
-        or normalized_version in {".", ".."}
-        or ".." in normalized_version
-        or Path(normalized_version).is_absolute()
-        or _SAFE_VERSION_SEGMENT.fullmatch(normalized_version) is None
-    ):
-        typer.secho(
-            "--version must be a safe path segment (letters, numbers, dot, underscore, hyphen).",
-            fg=typer.colors.RED,
-        )
-        raise typer.Exit(code=2)
+    normalized_version = _normalize_version_segment(version)
 
     if global_scope:
         prompts_base_dir = get_global_config_base_dir() / "prompts"
@@ -477,7 +502,10 @@ def prompts_install_command(
     for harness_name, output_path in zip(selected_harnesses, target_files, strict=True):
         ensure_directory(output_path.parent)
         output_path.write_text(
-            _render_prompt_bundle(harness=harness_name, version=normalized_version),
+            _render_prompt_bundle(
+                harness=harness_name,
+                version=normalized_version,
+            ),
             encoding="utf-8",
         )
         written_paths.append(str(output_path))
@@ -490,7 +518,7 @@ def prompts_install_command(
 
 
 @prompts_app.command(name="render")
-def prompts_render_stub(
+def prompts_render_command(
     harness: list[str] = typer.Option(
         ...,
         "--harness",
@@ -502,10 +530,31 @@ def prompts_render_stub(
         "--cli",
         help="Render bundle content to stdout.",
     ),
+    variables: list[str] = typer.Option(
+        [],
+        "--var",
+        help="Template variable override (KEY=VALUE). Repeatable.",
+    ),
 ) -> None:
-    """Render prompt bundles for manual copy/use (stub)."""
-    _ = (harness, version, cli_output)
-    _not_implemented("prompts render")
+    """Render prompt bundles for manual copy/use (no filesystem writes)."""
+    if not cli_output:
+        typer.secho("prompts render currently requires --cli", fg=typer.colors.RED)
+        raise typer.Exit(code=2)
+
+    selected_harnesses = _normalize_harnesses(harness)
+    normalized_version = _normalize_version_segment(version)
+    template_vars = _parse_template_vars(variables)
+
+    sections = []
+    for harness_name in selected_harnesses:
+        sections.append(
+            _render_prompt_bundle(
+                harness=harness_name,
+                version=normalized_version,
+                variables=template_vars,
+            )
+        )
+    typer.echo("\n\n---\n\n".join(sections))
 
 
 @mcp_app.command(name="select_model_for_task")
