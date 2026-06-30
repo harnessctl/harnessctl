@@ -93,10 +93,10 @@ def test_cli_prompts_install_command_executes(tmp_path):
     assert "Installed prompt bundles" in result.stdout
 
 
-def test_cli_prompts_render_stub_exit_code_and_message():
+def test_cli_prompts_render_command_executes():
     result = runner.invoke(
         app,
         ["prompts", "render", "--harness", "opencode", "--version", "v1", "--cli"],
     )
-    assert result.exit_code == 2
-    assert "Not implemented yet: prompts render" in result.stdout
+    assert result.exit_code == 0
+    assert "# harnessctl prompt bundle" in result.stdout
