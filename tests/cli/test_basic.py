@@ -76,6 +76,10 @@ def test_cli_config_init_command_executes(tmp_path):
 
 
 def test_cli_prompts_install_command_executes(tmp_path):
+    env = {
+        "HARNESSCTL_HOME": str(tmp_path / "home"),
+        "HOME": str(tmp_path / "home-user"),
+    }
     result = runner.invoke(
         app,
         [
@@ -87,7 +91,7 @@ def test_cli_prompts_install_command_executes(tmp_path):
             "v1",
             "--global",
         ],
-        env={"HARNESSCTL_HOME": str(tmp_path / "home")},
+        env=env,
     )
     assert result.exit_code == 0
     assert "Installed prompt bundles" in result.stdout
