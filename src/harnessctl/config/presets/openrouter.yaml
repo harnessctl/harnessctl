@@ -5,11 +5,78 @@ metadata:
 spec:
   provider: openrouter
   defaults:
+    taxonomy:
+      task_classes:
+        - implementation
+        - review
+        - docs
+        - frontend
+        - backend
+        - security
+        - architecture
+        - debugging
+      aliases:
+        ui: frontend
+        ux: frontend
     agents:
-      - id: openrouter-default
+      - id: openrouter-fast
         model: openrouter/anthropic/claude-3.5-sonnet
         provider: openrouter
-        tier: strong
+        tier: medium
         capabilities:
           - implementation
           - review
+          - docs
+        cost_band: standard
+      - id: openrouter-architect
+        model: openrouter/openai/gpt-5
+        provider: openrouter
+        tier: reasoning
+        capabilities:
+          - architecture
+          - reasoning
+          - hld
+          - lld
+        cost_band: draconic
+      - id: openrouter-security
+        model: openrouter/openai/o3
+        provider: openrouter
+        tier: reasoning
+        capabilities:
+          - security_analysis
+          - reasoning
+          - review
+        cost_band: expensive
+      - id: openrouter-frontend
+        model: openrouter/anthropic/claude-sonnet-4.5
+        provider: openrouter
+        tier: strong
+        capabilities:
+          - frontend
+          - implementation
+          - review
+        cost_band: premium
+    routing_rules:
+      - name: architecture-security
+        when:
+          task_type_in: [security, architecture, hld]
+        choose:
+          preferred_tiers: [reasoning, strong]
+          optimize_for: cost_per_success
+      - name: openrouter-default
+        when:
+          task_type_in: [implementation, review, docs, frontend, backend, debugging]
+        choose:
+          preferred_tiers: [medium, strong, reasoning]
+          optimize_for: cost
+    escalation:
+      strategy:
+        keying: task_class
+        fallback_on_unknown_task_class: default
+      chains:
+        - name: default
+          tiers: [medium, strong, reasoning]
+        - name: security
+          tiers: [strong, reasoning]
+        - name: frontend
+          tiers: [medium, strong, reasoning]

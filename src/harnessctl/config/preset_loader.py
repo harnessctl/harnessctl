@@ -10,6 +10,16 @@ import yaml
 SUPPORTED_PROVIDERS: tuple[str, ...] = ("github-copilot", "openrouter")
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list_of_dicts(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
 def _preset_resource_name(provider: str) -> str:
     return f"{provider}.yaml"
 
@@ -46,44 +56,66 @@ def build_routing_config_from_preset(provider: str) -> dict[str, Any]:
     if not isinstance(agents, list):
         raise ValueError(f"Invalid preset agents for provider {provider!r}")
 
+    taxonomy = _as_dict(defaults.get("taxonomy"))
+    task_classes = taxonomy.get("task_classes")
+    aliases = taxonomy.get("aliases")
+    if not isinstance(task_classes, list) or not task_classes:
+        task_classes = ["implementation", "review", "docs"]
+    if not isinstance(aliases, dict):
+        aliases = {}
+
+    routing_rules = _as_list_of_dicts(defaults.get("routing_rules"))
+    if not routing_rules:
+        routing_rules = [
+            {
+                "name": "default-rule",
+                "when": {"task_type_in": ["implementation", "review", "docs"]},
+                "choose": {
+                    "preferred_tiers": ["cheap", "medium", "strong"],
+                    "optimize_for": "cost",
+                },
+            }
+        ]
+
+    escalation = _as_dict(defaults.get("escalation"))
+    if not escalation:
+        escalation = {
+            "strategy": {
+                "keying": "task_class",
+                "fallback_on_unknown_task_class": "default",
+            },
+            "chains": [
+                {
+                    "name": "default",
+                    "tiers": ["cheap", "medium", "strong"],
+                }
+            ],
+        }
+
+    policies = _as_dict(defaults.get("policies"))
+
+    spec: dict[str, Any] = {
+        "taxonomy": {
+            "task_classes": task_classes,
+            "aliases": aliases,
+        },
+        "agent_registry": {
+            "agents": agents,
+        },
+        "routing": {
+            "rules": routing_rules,
+        },
+        "escalation": escalation,
+        "provider_presets": [provider],
+    }
+    if policies:
+        spec["policies"] = policies
+
     return {
         "apiVersion": "harnessctl/v1alpha1",
         "kind": "RoutingConfig",
         "metadata": {"name": "default"},
-        "spec": {
-            "taxonomy": {
-                "task_classes": ["implementation", "review", "docs"],
-                "aliases": {},
-            },
-            "agent_registry": {
-                "agents": agents,
-            },
-            "routing": {
-                "rules": [
-                    {
-                        "name": "default-rule",
-                        "when": {"task_type_in": ["implementation", "review", "docs"]},
-                        "choose": {
-                            "preferred_tiers": ["cheap", "medium", "strong"],
-                            "optimize_for": "cost",
-                        },
-                    }
-                ]
-            },
-            "escalation": {
-                "strategy": {
-                    "keying": "task_class",
-                    "fallback_on_unknown_task_class": "default",
-                },
-                "chains": [
-                    {
-                        "name": "default",
-                        "tiers": ["cheap", "medium", "strong"],
-                    }
-                ],
-            },
-            "provider_presets": [provider],
-        },
+        "spec": spec,
     }
 
 
