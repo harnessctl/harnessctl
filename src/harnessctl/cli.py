@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Optional
@@ -70,6 +71,8 @@ _SUPPORTED_PROMPT_HARNESSES = {
     "copilot-cli",
     "claude-cli",
 }
+
+_SAFE_VERSION_SEGMENT = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 class AppContext:
@@ -437,6 +440,19 @@ def prompts_install_command(
     if not normalized_version:
         typer.secho("--version must be a non-empty value.", fg=typer.colors.RED)
         raise typer.Exit(code=2)
+    if (
+        "/" in normalized_version
+        or "\\" in normalized_version
+        or normalized_version in {".", ".."}
+        or ".." in normalized_version
+        or Path(normalized_version).is_absolute()
+        or _SAFE_VERSION_SEGMENT.fullmatch(normalized_version) is None
+    ):
+        typer.secho(
+            "--version must be a safe path segment (letters, numbers, dot, underscore, hyphen).",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
 
     if global_scope:
         prompts_base_dir = get_global_config_base_dir() / "prompts"
@@ -458,7 +474,7 @@ def prompts_install_command(
         raise typer.Exit(code=2)
 
     written_paths: list[str] = []
-    for harness_name, output_path in zip(selected_harnesses, target_files):
+    for harness_name, output_path in zip(selected_harnesses, target_files, strict=True):
         ensure_directory(output_path.parent)
         output_path.write_text(
             _render_prompt_bundle(harness=harness_name, version=normalized_version),

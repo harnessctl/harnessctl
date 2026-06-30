@@ -128,3 +128,21 @@ def test_rejects_unknown_harness(tmp_path: Path) -> None:
     )
     assert result.exit_code == 2
     assert "Unsupported harness" in result.stdout
+
+
+def test_rejects_unsafe_version_segment(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "prompts",
+            "install",
+            "--harness",
+            "opencode",
+            "--version",
+            "../v1",
+            "--project",
+            str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 2
+    assert "safe path segment" in result.stdout
